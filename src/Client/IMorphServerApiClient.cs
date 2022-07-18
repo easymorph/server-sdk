@@ -28,6 +28,8 @@ namespace Morph.Server.Sdk.Client
     {
         event EventHandler<FileTransferProgressEventArgs> OnDataDownloadProgress;
         event EventHandler<FileTransferProgressEventArgs> OnDataUploadProgress;
+
+        HttpSecurity HttpSecurity { get; }
         
         
         
