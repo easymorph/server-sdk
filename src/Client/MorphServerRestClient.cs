@@ -147,17 +147,21 @@ namespace Morph.Server.Sdk.Client
             // but for HttpHead content reading is not necessary and might raise error.
             //var httpCompletionOption = httpMethod != HttpMethod.Head ? HttpCompletionOption.ResponseContentRead : HttpCompletionOption.ResponseHeadersRead;
             var httpCompletionOption = HttpCompletionOption.ResponseHeadersRead;
-            return await SendAsyncWithDiscoveryAndAutoUpgrade<TResult>(
-                httpMethod,
-                    path,
-                stringContent,
-                urlParameters,
-                headersCollection,
-                httpCompletionOption,
-                cancellationToken);
+            using (var response = await SendAsyncWithDiscoveryAndAutoUpgrade(
+                       httpMethod,
+                       path,
+                       stringContent,
+                       urlParameters,
+                       headersCollection,
+                       httpCompletionOption,
+                       cancellationToken))
+            {
+                return await HandleResponse<TResult>(response);
+            }
+
         }
 
-        protected virtual async Task<ApiResult<TResult>> SendAsyncWithDiscoveryAndAutoUpgrade<TResult>(
+        protected virtual async Task<HttpResponseMessage> SendAsyncWithDiscoveryAndAutoUpgrade(
             HttpMethod httpMethod,
             string path,
             HttpContent httpContent,
@@ -165,8 +169,7 @@ namespace Morph.Server.Sdk.Client
             HeadersCollection headersCollection,
             HttpCompletionOption httpCompletionOption,
             CancellationToken cancellationToken
-        ) 
-            where TResult : new()
+        )
         {
             if (HttpSecurityState == HttpSecurityState.NotEvaluated)
             {
@@ -190,15 +193,16 @@ namespace Morph.Server.Sdk.Client
                     headersCollection);
 
 
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+                using (var httpRequestCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+                using (var secureRequestCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
                 {
                     var httpRequest =
                         httpClient
-                            .SendAsync(httpRequestMessage, httpCompletionOption, cts.Token);
+                            .SendAsync(httpRequestMessage, httpCompletionOption, httpRequestCts.Token);
 
                     var secureRequest =
                         httpClient
-                            .SendAsync(secureRequestMessage, httpCompletionOption, cts.Token);
+                            .SendAsync(secureRequestMessage, httpCompletionOption, secureRequestCts.Token);
 
                     try
                     {
@@ -208,19 +212,19 @@ namespace Morph.Server.Sdk.Client
                         if (secureRequest.IsCompleted)
                         {
                             UpgradeToForcedHttps();
-                            using (var secureResponse = await secureRequest)
-                            {
-                                return await HandleResponse<TResult>(secureResponse);
-                            }
+                            httpRequestCts.Cancel();
+                            
+                            var secureResponse = await secureRequest;
+                            return secureResponse;
+
 
                         }
                         else if (httpRequest.IsCompleted)
                         {
                             SetToInsecureHttps();
-                            using (var httpResponse = await httpRequest)
-                            {
-                                return await HandleResponse<TResult>(httpResponse);
-                            }
+                            secureRequestCts.Cancel();
+                            var httpResponse = await httpRequest;
+                            return httpResponse;
                         }
                         else
                         {
@@ -229,7 +233,8 @@ namespace Morph.Server.Sdk.Client
                     }
                     finally
                     {
-                        cts.Cancel();
+                        httpRequestMessage?.Dispose();
+                        secureRequestMessage?.Dispose();
                     }
 
                 }
@@ -242,11 +247,9 @@ namespace Morph.Server.Sdk.Client
                            httpContent,
                            headersCollection))
                 {
-                    using (var response = await httpClient.SendAsync(httpRequestMessage, httpCompletionOption,
-                               cancellationToken))
-                    {
-                        return await HandleResponse<TResult>(response);
-                    }
+                    HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage, httpCompletionOption,
+                        cancellationToken);
+                    return response;
                 }
             }
 
@@ -380,22 +383,20 @@ namespace Morph.Server.Sdk.Client
                           {
                               try
                               {
-                                  //var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                                  using (var response = await SendAsyncWithDiscoveryAndAutoUpgrade(
+                                             httpMethod,
+                                             path,
+                                             content,
+                                             urlParameters,
+                                             headersCollection,
+                                             HttpCompletionOption.ResponseHeadersRead,
+                                             cancellationToken))
+                                  {
 
-                                  //var result = await HandleResponse<TResult>(response);
+                                      var result = await HandleResponse<TResult>(response);
+                                      serverPushStreaming.SetApiResult(result);
+                                  }
 
-                                  var result = await SendAsyncWithDiscoveryAndAutoUpgrade<TResult>(
-                                      httpMethod,
-                                      path,
-                                      content,
-                                      urlParameters,
-                                      headersCollection,
-                                      HttpCompletionOption.ResponseHeadersRead,
-                                      cancellationToken);
-
-
-                                  serverPushStreaming.SetApiResult(result);
-                                  
                               }
                               catch (Exception ex) when (ex.InnerException != null &&
                                     ex.InnerException is WebException web &&
@@ -460,15 +461,18 @@ namespace Morph.Server.Sdk.Client
                             content.Add(streamContent, "files", Path.GetFileName(sendFileStreamData.FileName));
 
 
-                            var result = await SendAsyncWithDiscoveryAndAutoUpgrade<TResult>(
-                                httpMethod,
-                                path,
-                                content,
-                                urlParameters,
-                                headersCollection,
-                                HttpCompletionOption.ResponseHeadersRead,
-                                cancellationToken);
-                            return result;
+                            using (var response = await SendAsyncWithDiscoveryAndAutoUpgrade(
+                                       httpMethod,
+                                       path,
+                                       content,
+                                       urlParameters,
+                                       headersCollection,
+                                       HttpCompletionOption.ResponseHeadersRead,
+                                       cancellationToken))
+                            {
+                                return await HandleResponse<TResult>(response);
+                            }
+                                
 
                             //var url = await ComposeRequestUriAsync(path, urlParameters, cancellationToken);
                             ////var url = path + (urlParameters != null ? urlParameters.ToQueryString() : string.Empty);
@@ -499,9 +503,19 @@ namespace Morph.Server.Sdk.Client
         protected virtual async Task<ApiResult<FetchFileStreamData>> RetrieveFileStreamAsync(HttpMethod httpMethod, string path, NameValueCollection urlParameters, HeadersCollection headersCollection, Action<FileTransferProgressEventArgs> onReceiveProgress, CancellationToken cancellationToken)
         {
             //var url = path + (urlParameters != null ? urlParameters.ToQueryString() : string.Empty);
-            var url = await ComposeRequestUriAsync(path, urlParameters, cancellationToken);
-            HttpResponseMessage response = await httpClient.SendAsync(
-                   BuildHttpRequestMessage(httpMethod, url, null, headersCollection), HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            //var url = await ComposeRequestUriAsync(path, urlParameters, cancellationToken);
+            //HttpResponseMessage response = await httpClient.SendAsync(
+            //       BuildHttpRequestMessage(httpMethod, url, null, headersCollection), HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            var response = await SendAsyncWithDiscoveryAndAutoUpgrade(
+                httpMethod,
+                path,
+                null,
+                urlParameters,
+                headersCollection,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+
             {
                 if (response.IsSuccessStatusCode)
                 {
