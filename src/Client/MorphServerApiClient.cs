@@ -143,7 +143,7 @@ namespace Morph.Server.Sdk.Client
             client.DefaultRequestHeaders.Add("Connection", "Keep-Alive");
             client.DefaultRequestHeaders.Add("Keep-Alive", "timeout=120");
 
-            client.MaxResponseContentBufferSize = 100 * 1024;
+            
             client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue
             {
                 NoCache = true,
