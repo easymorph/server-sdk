@@ -128,7 +128,6 @@ namespace Morph.Server.Sdk.Client
             }
 
             var client = new HttpClient(httpClientHandler, true);
-            //client.BaseAddress = //new Uri(config.ApiUri, new Uri(_api_v1, UriKind.Relative));
 
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(
