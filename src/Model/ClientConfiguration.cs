@@ -20,7 +20,7 @@ namespace Morph.Server.Sdk.Model
         public bool AutoDisposeClientOnSessionClose { get; set; } = MorphServerApiClientGlobalConfig.AutoDisposeClientOnSessionClose;
 
         public Uri ApiUri { get; set; }
-        public HttpSecurity HttpSecurity { get; set; } = HttpSecurity.NotEvaluated;
+        public HttpSecurityState HttpSecurityState { get; set; } = HttpSecurityState.NotEvaluated;
         internal string SDKVersionString { get; set; } = MorphServerApiClientGlobalConfig.SDKVersionString;
 
 

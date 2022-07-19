@@ -12,7 +12,7 @@ namespace Morph.Server.Sdk.Client
     public interface IRestClient : IDisposable
     {
 
-        HttpSecurity HttpSecurity { get; }
+        HttpSecurityState HttpSecurityState { get; }
         HttpClient HttpClient { get; }
         Task<ApiResult<TResult>> GetAsync<TResult>(string url, NameValueCollection urlParameters, HeadersCollection headersCollection, CancellationToken cancellationToken)
           where TResult : new();

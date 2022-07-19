@@ -7,7 +7,7 @@ using Morph.Server.Sdk.Exceptions;
 
 namespace Morph.Server.Sdk.Client
 {
-    public class MorphDataContractJsonJsonSerializer: IJsonSerializer
+    public class MorphDataContractJsonSerializer: IJsonSerializer
     {
         public T Deserialize<T>(string input)
             where T: new()

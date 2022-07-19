@@ -108,7 +108,7 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(httpClient));
             }
 
-            return new MorphServerRestClient(httpClient, baseAddress, clientConfiguration.HttpSecurity);
+            return new MorphServerRestClient(httpClient, baseAddress, clientConfiguration.HttpSecurityState);
         }
 
 
@@ -432,7 +432,7 @@ namespace Morph.Server.Sdk.Client
         }
 
 
-        public HttpSecurity HttpSecurity => RestClient.HttpSecurity;
+        public HttpSecurityState HttpSecurityState => RestClient.HttpSecurityState;
 
         /// <summary>
         /// Returns server status. May raise exception if server is unreachable

@@ -18,26 +18,6 @@ using static Morph.Server.Sdk.Helper.StreamWithProgress;
 
 namespace Morph.Server.Sdk.Client
 {
-
-    /// <summary>
-    /// 
-    /// </summary>
-    public enum HttpSecurity
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        NotEvaluated,
-        /// <summary>
-        /// 
-        /// </summary>
-        ForcedHttps,
-        /// <summary>
-        /// 
-        /// </summary>
-        PlainHttp
-    }
-
     public class MorphServerRestClient : IRestClient
     {
         protected readonly IJsonSerializer jsonSerializer;
@@ -50,17 +30,17 @@ namespace Morph.Server.Sdk.Client
         private HttpClient httpClient;
         public HttpClient HttpClient { get => httpClient; set => httpClient = value; }
 
-        public HttpSecurity HttpSecurity { get; protected set; } = HttpSecurity.NotEvaluated;
+        public HttpSecurityState HttpSecurityState { get; protected set; } = HttpSecurityState.NotEvaluated;
 
-        public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, IJsonSerializer jsonSerializer, HttpSecurity httpSecurity = HttpSecurity.NotEvaluated)
+        public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, IJsonSerializer jsonSerializer, HttpSecurityState httpSecurityState = HttpSecurityState.NotEvaluated)
         {
             this.jsonSerializer = jsonSerializer ?? throw new ArgumentNullException(nameof(jsonSerializer));
             this.BaseAddress = baseAddress ?? throw new ArgumentNullException(nameof(baseAddress));
-            HttpSecurity = httpSecurity;
+            HttpSecurityState = httpSecurityState;
             HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
             // force strict https 
-            if (IsHttps(baseAddress) || httpSecurity == HttpSecurity.ForcedHttps)
+            if (IsHttps(baseAddress) || httpSecurityState == HttpSecurityState.ForcedHttps)
             {
                 UpgradeToForcedHttps();
             }
@@ -68,8 +48,8 @@ namespace Morph.Server.Sdk.Client
 
         }
 
-        public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, HttpSecurity httpSecurity = HttpSecurity.NotEvaluated):
-            this(httpClient, baseAddress,  new MorphDataContractJsonJsonSerializer(), httpSecurity)
+        public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, HttpSecurityState httpSecurityState = HttpSecurityState.NotEvaluated):
+            this(httpClient, baseAddress,  new MorphDataContractJsonSerializer(), httpSecurityState)
         {
             
         }
@@ -90,11 +70,11 @@ namespace Morph.Server.Sdk.Client
                 Scheme = HttpsSchemeConstant
             };
             BaseAddress = builder.Uri;
-            HttpSecurity = HttpSecurity.ForcedHttps;
+            HttpSecurityState = HttpSecurityState.ForcedHttps;
         }
         protected virtual void SetToInsecureHttps()
         {
-            HttpSecurity = HttpSecurity.PlainHttp;
+            HttpSecurityState = HttpSecurityState.PlainHttp;
         }
         public Task<ApiResult<TResult>> DeleteAsync<TResult>(string url, NameValueCollection urlParameters, HeadersCollection headersCollection, CancellationToken cancellationToken)
               where TResult : new()
@@ -130,24 +110,24 @@ namespace Morph.Server.Sdk.Client
         protected virtual async Task<Uri> ComposeRequestUriAsync(string path, NameValueCollection urlParameters, CancellationToken cancellationToken)
         {
 
-            if (HttpSecurity == HttpSecurity.NotEvaluated)
+            if (HttpSecurityState == HttpSecurityState.NotEvaluated)
             {
                 await DetectAndAutoUpgradeSchemeAsync(cancellationToken);
             }
 
-            switch (HttpSecurity)
+            switch (HttpSecurityState)
             {
-                case HttpSecurity.ForcedHttps:
+                case HttpSecurityState.ForcedHttps:
                     var uri = BuildUri(BaseAddress, path, urlParameters);
                     if (IsHttps(uri))
                         return uri;
                     else
                         throw new Exception("The client expected the scheme to be HTTPS.");
-                case HttpSecurity.PlainHttp:
+                case HttpSecurityState.PlainHttp:
                     // as is
                     var palUri = BuildUri(BaseAddress, path, urlParameters);
                     return palUri;
-                case HttpSecurity.NotEvaluated:
+                case HttpSecurityState.NotEvaluated:
                     throw new Exception("HTTP scheme is still in a not evaluated state.");
                 default:
                     throw new NotSupportedException();

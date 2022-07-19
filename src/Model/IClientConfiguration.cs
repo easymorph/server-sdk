@@ -19,7 +19,7 @@ namespace Morph.Server.Sdk.Model
         bool AutoDisposeClientOnSessionClose { get; }        
 
         Uri ApiUri { get; }
-        HttpSecurity HttpSecurity { get; }
+        HttpSecurityState HttpSecurityState { get; }
 
 #if NETSTANDARD2_0
         Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> ServerCertificateCustomValidationCallback { get; }
