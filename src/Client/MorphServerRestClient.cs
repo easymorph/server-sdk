@@ -108,7 +108,7 @@ namespace Morph.Server.Sdk.Client
             return SendAsyncApiResult<TResult, TModel>(HttpMethod.Put, url, model, urlParameters, headersCollection, cancellationToken);
         }
 
-        
+
 
         protected virtual Uri BuildUri(Uri baseAddress, string path, NameValueCollection urlParameters)
         {
@@ -124,15 +124,6 @@ namespace Morph.Server.Sdk.Client
 
         protected virtual async Task<ApiResult<TResult>> SendAsyncApiResult<TResult, TModel>(HttpMethod httpMethod, string path, TModel model, NameValueCollection urlParameters, HeadersCollection headersCollection, CancellationToken cancellationToken)
               where TResult : new()
-        {
-            await EnsureHttpStateEvaluatedAsync(model, cancellationToken);
-
-            return await _SendAsync<TResult, TModel>(httpMethod, path, model, urlParameters, headersCollection, cancellationToken);
-        }
-
-        protected virtual async Task<ApiResult<TResult>> _SendAsync<TResult, TModel>(HttpMethod httpMethod, string path, TModel model,
-            NameValueCollection urlParameters, HeadersCollection headersCollection, CancellationToken cancellationToken)
-            where TResult : new()
         {
             StringContent stringContent = null;
             if (model != null)
@@ -158,15 +149,8 @@ namespace Morph.Server.Sdk.Client
             }
         }
 
-        protected virtual async Task EnsureHttpStateEvaluatedAsync<TModel>(TModel model, CancellationToken cancellationToken)
-        {
-            if (model != null && HttpSecurityState == HttpSecurityState.NotEvaluated)
-            {
-                await _SendAsync<NoContentRequest, NoContentRequest>(HttpMethod.Get, HttpStateDetectionEndpoint, null,
-                    null, null, cancellationToken);
-            }
 
-        }
+
 
 
         protected virtual async Task<HttpResponseMessage> SendAsyncWithDiscoveryAndAutoUpgrade(
@@ -180,92 +164,153 @@ namespace Morph.Server.Sdk.Client
         )
         {
 
-            if (HttpSecurityState == HttpSecurityState.NotEvaluated)
+            // detect current http/https and upgrade if necessary 
+
+            if (httpContent != null && HttpSecurityState == HttpSecurityState.NotEvaluated)
             {
-                UriBuilder builder = new UriBuilder(BaseAddress)
+                using (await _SendAsyncInDisсoveryMode(
+                           HttpMethod.Get,
+                           HttpStateDetectionEndpoint,
+                           null,
+                           null,
+                           null,
+                           HttpCompletionOption.ResponseHeadersRead,
+                           cancellationToken))
                 {
-                    Scheme = HttpsSchemeConstant
-                };
-                var secureBaseUri = builder.Uri;
-
-
-                HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(
-                    httpMethod,
-                    BuildUri(BaseAddress, path, urlParameters),
-                    httpContent,
-                    headersCollection);
-
-
-                HttpRequestMessage secureRequestMessage = BuildHttpRequestMessage(
-                    httpMethod,
-                    BuildUri(secureBaseUri, path, urlParameters),
-                    httpContent,
-                    headersCollection);
-
-                {
-                    var httpRequest =
-                        httpClient
-                            .SendAsync(httpRequestMessage, httpCompletionOption, cancellationToken);
-
-                    var secureRequest =
-                        httpClient
-                            .SendAsync(secureRequestMessage, httpCompletionOption, cancellationToken);
-
-                    try
-                    {
-                         await Task.WhenAny(secureRequest, httpRequest);
-
-
-                        if (httpRequest.Status == TaskStatus.RanToCompletion || secureRequest.Status == TaskStatus.Faulted)
-                        {
-                            var httpResponse = await httpRequest;
-                            SetToPlainHttp();
-                            return httpResponse;
-                        }
-                        else if (secureRequest.Status == TaskStatus.RanToCompletion || httpRequest.Status == TaskStatus.Faulted)
-                        {
-                            var secureResponse = await secureRequest;
-                            UpgradeToForcedHttps();
-                            return secureResponse;
-                        }
-                        else if (cancellationToken.IsCancellationRequested)
-                        {
-                            if (secureRequest.Status == TaskStatus.Canceled)
-                            {
-                                return await secureRequest;
-                            }
-                            else return await httpRequest;
-                        }
-                        else
-                        {
-                            throw new Exception("Unable to detect http/https");
-                        }
-                    }
-                    finally
-                    {
-                        httpRequestMessage?.Dispose();
-                        secureRequestMessage?.Dispose();
-                    }
 
                 }
+            }
+
+
+            if (HttpSecurityState == HttpSecurityState.NotEvaluated)
+            {
+                return await _SendAsyncInDisсoveryMode(httpMethod,
+                    path,
+                    httpContent,
+                    urlParameters,
+                    headersCollection,
+                    httpCompletionOption,
+                    cancellationToken);
             }
             else
             {
-                using (HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(
-                           httpMethod,
-                           BuildUri(BaseAddress, path, urlParameters),
-                           httpContent,
-                           headersCollection))
-                {
-                    HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage,
-                        httpCompletionOption,
-                        cancellationToken);
-                    return response;
-                }
+                return await _SendAsyncAsIs(httpMethod,
+                    path,
+                    httpContent,
+                    urlParameters,
+                    headersCollection,
+                    httpCompletionOption,
+                    cancellationToken);
+
             }
 
 
 
+        }
+
+
+        protected virtual async Task<HttpResponseMessage> _SendAsyncAsIs
+        (
+            HttpMethod httpMethod,
+            string path,
+            HttpContent httpContent,
+            NameValueCollection urlParameters,
+            HeadersCollection headersCollection,
+            HttpCompletionOption httpCompletionOption,
+            CancellationToken cancellationToken
+        )
+        {
+            using (HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(
+                       httpMethod,
+                       BuildUri(BaseAddress, path, urlParameters),
+                       httpContent,
+                       headersCollection))
+            {
+                HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage,
+                    httpCompletionOption,
+                    cancellationToken);
+                return response;
+            }
+        }
+
+
+        protected virtual async Task<HttpResponseMessage> _SendAsyncInDisсoveryMode
+        (
+            HttpMethod httpMethod,
+            string path,
+            HttpContent httpContent,
+            NameValueCollection urlParameters,
+            HeadersCollection headersCollection,
+            HttpCompletionOption httpCompletionOption,
+            CancellationToken cancellationToken
+        )
+        {
+            UriBuilder builder = new UriBuilder(BaseAddress)
+            {
+                Scheme = HttpsSchemeConstant
+            };
+            var secureBaseUri = builder.Uri;
+
+
+            HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(
+                httpMethod,
+                BuildUri(BaseAddress, path, urlParameters),
+                httpContent,
+                headersCollection);
+
+
+            HttpRequestMessage secureRequestMessage = BuildHttpRequestMessage(
+                httpMethod,
+                BuildUri(secureBaseUri, path, urlParameters),
+                httpContent,
+                headersCollection);
+
+            {
+                var httpRequest =
+                    httpClient
+                        .SendAsync(httpRequestMessage, httpCompletionOption, cancellationToken);
+
+                var secureRequest =
+                    httpClient
+                        .SendAsync(secureRequestMessage, httpCompletionOption, cancellationToken);
+
+                try
+                {
+                    await Task.WhenAny(secureRequest, httpRequest);
+
+
+                    if (httpRequest.Status == TaskStatus.RanToCompletion || secureRequest.Status == TaskStatus.Faulted)
+                    {
+                        var httpResponse = await httpRequest;
+                        SetToPlainHttp();
+                        return httpResponse;
+                    }
+                    else if (secureRequest.Status == TaskStatus.RanToCompletion || httpRequest.Status == TaskStatus.Faulted)
+                    {
+                        var secureResponse = await secureRequest;
+                        UpgradeToForcedHttps();
+                        return secureResponse;
+                    }
+                    else if (cancellationToken.IsCancellationRequested)
+                    {
+                        if (secureRequest.Status == TaskStatus.Canceled)
+                        {
+                            return await secureRequest;
+                        }
+                        else return await httpRequest;
+                    }
+                    else
+                    {
+                        throw new Exception("Unable to detect http/https");
+                    }
+                }
+                finally
+                {
+                    httpRequestMessage?.Dispose();
+                    secureRequestMessage?.Dispose();
+                }
+
+            }
         }
 
 
