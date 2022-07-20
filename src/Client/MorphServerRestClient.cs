@@ -1,6 +1,7 @@
 ﻿using Morph.Server.Sdk.Exceptions;
 using Morph.Server.Sdk.Helper;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -10,6 +11,7 @@ using System.Collections.Specialized;
 using Morph.Server.Sdk.Mappers;
 using Morph.Server.Sdk.Dto.Errors;
 using System.IO;
+using System.Linq;
 using Morph.Server.Sdk.Model;
 using Morph.Server.Sdk.Model.InternalModels;
 using Morph.Server.Sdk.Dto;
@@ -23,10 +25,10 @@ namespace Morph.Server.Sdk.Client
         protected readonly IJsonSerializer jsonSerializer;
         private static string HttpsSchemeConstant = "https";
 
-        
+
 
         public Uri BaseAddress { get; protected set; }
-        
+
         private HttpClient httpClient;
         public HttpClient HttpClient { get => httpClient; set => httpClient = value; }
 
@@ -44,16 +46,16 @@ namespace Morph.Server.Sdk.Client
             {
                 UpgradeToForcedHttps();
             }
-            
+
 
         }
 
-        public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, HttpSecurityState httpSecurityState = HttpSecurityState.NotEvaluated):
-            this(httpClient, baseAddress,  new MorphDataContractJsonSerializer(), httpSecurityState)
+        public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, HttpSecurityState httpSecurityState = HttpSecurityState.NotEvaluated) :
+            this(httpClient, baseAddress, new MorphDataContractJsonSerializer(), httpSecurityState)
         {
-            
+
         }
-        
+
 
         private bool IsHttps(Uri uri)
         {
@@ -72,7 +74,7 @@ namespace Morph.Server.Sdk.Client
             BaseAddress = builder.Uri;
             HttpSecurityState = HttpSecurityState.ForcedHttps;
         }
-        protected virtual void SetToInsecureHttps()
+        protected virtual void SetToPlainHttp()
         {
             HttpSecurityState = HttpSecurityState.PlainHttp;
         }
@@ -93,24 +95,26 @@ namespace Morph.Server.Sdk.Client
             return SendAsyncApiResult<TResult, NoContentRequest>(HttpMethod.Get, url, null, urlParameters, headersCollection, cancellationToken);
         }
 
-        public Task<ApiResult<TResult>> PostAsync<TModel, TResult>(string url, TModel model, NameValueCollection urlParameters, HeadersCollection headersCollection, CancellationToken cancellationToken)
+        public async Task<ApiResult<TResult>> PostAsync<TModel, TResult>(string url, TModel model, NameValueCollection urlParameters, HeadersCollection headersCollection, CancellationToken cancellationToken)
               where TResult : new()
         {
-            return SendAsyncApiResult<TResult, TModel>(HttpMethod.Post, url, model, urlParameters, headersCollection, cancellationToken);
+            await EnsureHttpStateEvaluatedAsync(model, cancellationToken);
+            return await SendAsyncApiResult<TResult, TModel>(HttpMethod.Post, url, model, urlParameters, headersCollection, cancellationToken);
         }
 
-        public Task<ApiResult<TResult>> PutAsync<TModel, TResult>(string url, TModel model, NameValueCollection urlParameters, HeadersCollection headersCollection, CancellationToken cancellationToken)
+        public async Task<ApiResult<TResult>> PutAsync<TModel, TResult>(string url, TModel model, NameValueCollection urlParameters, HeadersCollection headersCollection, CancellationToken cancellationToken)
               where TResult : new()
         {
-            return SendAsyncApiResult<TResult, TModel>(HttpMethod.Put, url, model, urlParameters, headersCollection, cancellationToken);
+            await EnsureHttpStateEvaluatedAsync(model, cancellationToken);
+            return await SendAsyncApiResult<TResult, TModel>(HttpMethod.Put, url, model, urlParameters, headersCollection, cancellationToken);
         }
 
 
-        protected virtual Task<Uri> ComposeRequestUriAsync(string path, NameValueCollection urlParameters, CancellationToken cancellationToken)
-        {
-            var uri = BuildUri(BaseAddress, path, urlParameters);
-            return Task.FromResult(uri);
-        }
+        //protected virtual Task<Uri> ComposeRequestUriAsync(string path, NameValueCollection urlParameters, CancellationToken cancellationToken)
+        //{
+        //    var uri = BuildUri(BaseAddress, path, urlParameters);
+        //    return Task.FromResult(uri);
+        //}
 
 
 
@@ -139,10 +143,6 @@ namespace Morph.Server.Sdk.Client
                 stringContent = new StringContent(serialized, Encoding.UTF8, "application/json");
             }
 
-            //var url = await ComposeRequestUriAsync(path, urlParameters, cancellationToken);
-
-            //HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(httpMethod, url, stringContent, headersCollection);
-
             // for model binding request read and buffer full server response
             // but for HttpHead content reading is not necessary and might raise error.
             //var httpCompletionOption = httpMethod != HttpMethod.Head ? HttpCompletionOption.ResponseContentRead : HttpCompletionOption.ResponseHeadersRead;
@@ -161,104 +161,120 @@ namespace Morph.Server.Sdk.Client
 
         }
 
+        protected virtual async Task EnsureHttpStateEvaluatedAsync<TModel>(TModel model, CancellationToken cancellationToken)
+        {
+            if (model != null && HttpSecurityState == HttpSecurityState.NotEvaluated)
+            {
+                await SendAsyncApiResult<NoContentRequest, NoContentRequest>(HttpMethod.Get, "server/status", null,
+                    null, null, cancellationToken);
+            }
+
+        }
+
+
         protected virtual async Task<HttpResponseMessage> SendAsyncWithDiscoveryAndAutoUpgrade(
             HttpMethod httpMethod,
             string path,
             HttpContent httpContent,
-            NameValueCollection urlParameters, 
+            NameValueCollection urlParameters,
             HeadersCollection headersCollection,
             HttpCompletionOption httpCompletionOption,
             CancellationToken cancellationToken
         )
         {
-            if (HttpSecurityState == HttpSecurityState.NotEvaluated)
+            try
             {
-                UriBuilder builder = new UriBuilder(BaseAddress)
+                if (HttpSecurityState == HttpSecurityState.NotEvaluated)
                 {
-                    Scheme = HttpsSchemeConstant
-                };
-                var secureBaseUri = builder.Uri;
-
-                HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(
-                    httpMethod,
-                    BuildUri(BaseAddress, path, urlParameters),
-                    httpContent,
-                    headersCollection);
-                
-
-                HttpRequestMessage secureRequestMessage = BuildHttpRequestMessage(
-                    httpMethod,
-                    BuildUri(secureBaseUri, path, urlParameters),
-                    httpContent,
-                    headersCollection);
-
-
-                using (var httpRequestCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
-                using (var secureRequestCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
-                {
-                    var httpRequest =
-                        httpClient
-                            .SendAsync(httpRequestMessage, httpCompletionOption, httpRequestCts.Token);
-
-                    var secureRequest =
-                        httpClient
-                            .SendAsync(secureRequestMessage, httpCompletionOption, secureRequestCts.Token);
-
-                    try
+                    UriBuilder builder = new UriBuilder(BaseAddress)
                     {
-                        await Task.WhenAny(httpRequest, secureRequest);
+                        Scheme = HttpsSchemeConstant
+                    };
+                    var secureBaseUri = builder.Uri;
 
 
-                        if (secureRequest.IsCompleted)
-                        {
-                            UpgradeToForcedHttps();
-                            httpRequestCts.Cancel();
-                            
-                            var secureResponse = await secureRequest;
-                            return secureResponse;
 
 
-                        }
-                        else if (httpRequest.IsCompleted)
-                        {
-                            SetToInsecureHttps();
-                            secureRequestCts.Cancel();
-                            var httpResponse = await httpRequest;
-                            return httpResponse;
-                        }
-                        else
-                        {
-                            throw new Exception("Unable to detect http/https");
-                        }
-                    }
-                    finally
+                    HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(
+                        httpMethod,
+                        BuildUri(BaseAddress, path, urlParameters),
+                        httpContent,
+                        headersCollection);
+
+
+                    HttpRequestMessage secureRequestMessage = BuildHttpRequestMessage(
+                        httpMethod,
+                        BuildUri(secureBaseUri, path, urlParameters),
+                        httpContent,
+                        headersCollection);
+
+
+
+
                     {
-                        httpRequestMessage?.Dispose();
-                        secureRequestMessage?.Dispose();
-                    }
+                        var httpRequest =
+                            httpClient
+                                .SendAsync(httpRequestMessage, httpCompletionOption, cancellationToken);
 
+                        var secureRequest =
+                            httpClient
+                                .SendAsync(secureRequestMessage, httpCompletionOption, cancellationToken);
+
+                        try
+                        {
+                            await Task.WhenAny(secureRequest, httpRequest);
+
+
+                            if (httpRequest.Status == TaskStatus.RanToCompletion || secureRequest.Status == TaskStatus.Faulted)
+                            {
+                                var httpResponse = await httpRequest;
+                                SetToPlainHttp();
+                                return httpResponse;
+                            }
+                            else if (secureRequest.Status == TaskStatus.RanToCompletion || httpRequest.Status == TaskStatus.Faulted)
+                            {
+                                var secureResponse = await secureRequest;
+                                UpgradeToForcedHttps();
+                                return secureResponse;
+                            }
+                            else
+                            {
+                                throw new Exception("Unable to detect http/https");
+                            }
+                        }
+                        finally
+                        {
+                            httpRequestMessage?.Dispose();
+                            secureRequestMessage?.Dispose();
+                        }
+
+                    }
                 }
+                else
+                {
+                    using (HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(
+                               httpMethod,
+                               BuildUri(BaseAddress, path, urlParameters),
+                               httpContent,
+                               headersCollection))
+                    {
+                        HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage,
+                            httpCompletionOption,
+                            cancellationToken);
+                        return response;
+                    }
+                }
+
             }
-            else
+            catch (Exception e)
             {
-                using (HttpRequestMessage httpRequestMessage = BuildHttpRequestMessage(
-                           httpMethod,
-                           BuildUri(BaseAddress, path, urlParameters),
-                           httpContent,
-                           headersCollection))
-                {
-                    HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage, httpCompletionOption,
-                        cancellationToken);
-                    return response;
-                }
+                throw;
             }
 
-
-            
         }
 
 
-        protected  virtual async Task<ApiResult<TResult>> HandleResponse<TResult>(HttpResponseMessage response)
+        protected virtual async Task<ApiResult<TResult>> HandleResponse<TResult>(HttpResponseMessage response)
             where TResult : new()
         {
             if (response.IsSuccessStatusCode)
@@ -364,6 +380,7 @@ namespace Morph.Server.Sdk.Client
         {
             try
             {
+                await EnsureHttpStateEvaluatedAsync(startContiniousStreamingRequest, cancellationToken);
                 string boundary = "MorphRestClient-Streaming--------" + Guid.NewGuid().ToString("N");
 
                 var content = new MultipartFormDataContent(boundary);
@@ -372,57 +389,54 @@ namespace Morph.Server.Sdk.Client
                 var streamContent = new ContiniousSteamingHttpContent(cancellationToken);
                 var serverPushStreaming = new ServerPushStreaming(streamContent);
                 content.Add(streamContent, "files", Path.GetFileName(startContiniousStreamingRequest.FileName));
-                //var url =  path + (urlParameters != null ? urlParameters.ToQueryString() : string.Empty);
-                //var url = await ComposeRequestUriAsync(path, urlParameters, cancellationToken);
-                //var requestMessage = BuildHttpRequestMessage(httpMethod, url, content, headersCollection);
-                //using (requestMessage)
-                {
-                    new Task(async () =>
+
+
+
+                new Task(async () =>
+                  {
+                      try
                       {
                           try
                           {
-                              try
+                              using (var response = await SendAsyncWithDiscoveryAndAutoUpgrade(
+                                         httpMethod,
+                                         path,
+                                         content,
+                                         urlParameters,
+                                         headersCollection,
+                                         HttpCompletionOption.ResponseHeadersRead,
+                                         cancellationToken))
                               {
-                                  using (var response = await SendAsyncWithDiscoveryAndAutoUpgrade(
-                                             httpMethod,
-                                             path,
-                                             content,
-                                             urlParameters,
-                                             headersCollection,
-                                             HttpCompletionOption.ResponseHeadersRead,
-                                             cancellationToken))
-                                  {
+                                  var result = await HandleResponse<TResult>(response);
+                                  serverPushStreaming.SetApiResult(result);
+                              }
 
-                                      var result = await HandleResponse<TResult>(response);
-                                      serverPushStreaming.SetApiResult(result);
-                                  }
-
-                              }
-                              catch (Exception ex) when (ex.InnerException != null &&
-                                    ex.InnerException is WebException web &&
-                                    web.Status == WebExceptionStatus.ConnectionClosed)
-                              {
-                                  serverPushStreaming.SetApiResult(ApiResult<TResult>.Fail(new MorphApiNotFoundException("Specified folder not found")));
-                              }
-                              catch (Exception e)
-                              {
-                                  serverPushStreaming.SetApiResult(ApiResult<TResult>.Fail(e));
-                              }
+                          }
+                          catch (Exception ex) when (ex.InnerException != null &&
+                                ex.InnerException is WebException web &&
+                                web.Status == WebExceptionStatus.ConnectionClosed)
+                          {
+                              serverPushStreaming.SetApiResult(ApiResult<TResult>.Fail(new MorphApiNotFoundException("Specified folder not found")));
+                          }
+                          catch (Exception e)
+                          {
+                              serverPushStreaming.SetApiResult(ApiResult<TResult>.Fail(e));
+                          }
 
                               //requestMessage.Dispose();
                               streamContent.Dispose();
-                              content.Dispose();
-                          }
-                          catch (Exception)
-                          {
-                          //  dd
+                          content.Dispose();
+                      }
+                      catch (Exception)
+                      {
+                              //  nothing
                       }
 
-                      }).Start();
-                    return ApiResult<ServerPushStreaming>.Ok(serverPushStreaming);
+                  }).Start();
+                return ApiResult<ServerPushStreaming>.Ok(serverPushStreaming);
 
 
-                }
+
 
 
             }
@@ -448,13 +462,15 @@ namespace Morph.Server.Sdk.Client
         {
             try
             {
+                await EnsureHttpStateEvaluatedAsync(sendFileStreamData, cancellationToken);
+
                 string boundary = "MorphRestClient--------" + Guid.NewGuid().ToString("N");
 
                 using (var content = new MultipartFormDataContent(boundary))
                 {
                     var uploadProgress = new FileProgress(sendFileStreamData.FileName, sendFileStreamData.FileSize, onSendProgress);
 
-                    using (cancellationToken.Register(() => uploadProgress.ChangeState(FileProgressState.Cancelled)))
+                     using (cancellationToken.Register(() => uploadProgress.ChangeState(FileProgressState.Cancelled)))
                     {
                         using (var streamContent = new ProgressStreamContent(sendFileStreamData.Stream, uploadProgress))
                         {
@@ -472,18 +488,7 @@ namespace Morph.Server.Sdk.Client
                             {
                                 return await HandleResponse<TResult>(response);
                             }
-                                
 
-                            //var url = await ComposeRequestUriAsync(path, urlParameters, cancellationToken);
-                            ////var url = path + (urlParameters != null ? urlParameters.ToQueryString() : string.Empty);
-                            //var requestMessage = BuildHttpRequestMessage(httpMethod, url, content, headersCollection);
-                            //using (requestMessage)
-                            //{
-                            //    using (var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
-                            //    {
-                            //        return await HandleResponse<TResult>(response);
-                            //    }
-                            //}
                         }
                     }
                 }
@@ -546,8 +551,8 @@ namespace Morph.Server.Sdk.Client
                         var streamWithProgress = new StreamWithProgress(streamToReadFrom, contentLength.Value, cancellationToken,
                             e =>
                             {
-                            // on read progress handler
-                            if (downloadProgress != null)
+                                // on read progress handler
+                                if (downloadProgress != null)
                                 {
                                     totalProcessedBytes = e.TotalBytesRead;
                                     downloadProgress.SetProcessedBytes(totalProcessedBytes);
@@ -555,8 +560,8 @@ namespace Morph.Server.Sdk.Client
                             },
                         () =>
                         {
-                        // on disposed handler
-                        if (downloadProgress != null && downloadProgress.ProcessedBytes != totalProcessedBytes)
+                            // on disposed handler
+                            if (downloadProgress != null && downloadProgress.ProcessedBytes != totalProcessedBytes)
                             {
                                 downloadProgress.ChangeState(FileProgressState.Cancelled);
                             }
@@ -564,8 +569,8 @@ namespace Morph.Server.Sdk.Client
                         },
                         (tokenCancellationReason, token) =>
                         {
-                        // on tokenCancelled
-                        if (tokenCancellationReason == TokenCancellationReason.HttpTimeoutToken)
+                            // on tokenCancelled
+                            if (tokenCancellationReason == TokenCancellationReason.HttpTimeoutToken)
                             {
                                 throw new Exception("Timeout");
                             }
