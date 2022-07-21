@@ -18,7 +18,7 @@ namespace Morph.Server.Sdk.Client
         IClientConfiguration Config { get; }
     }
 
-    internal interface ICanCloseSession: IHasConfig, IDisposable
+    public interface ICanCloseSession: IHasConfig, IDisposable
     {
         Task CloseSessionAsync(ApiSession apiSession, CancellationToken cancellationToken);
         
