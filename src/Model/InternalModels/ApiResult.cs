@@ -13,25 +13,25 @@ namespace Morph.Server.Sdk.Model.InternalModels
         public virtual Exception Error { get; protected set; } = default(Exception);
         public virtual bool IsSucceed { get { return Error == null; } }
 
-        public virtual HttpResponseHeaders ResponseHeaders { get; protected set; } =  default(HttpResponseHeaders);
-        public static ApiResult<T> Fail(Exception exception, HttpResponseHeaders httpResponseHeaders)
+        public virtual HttpContentHeaders ResponseHeaders { get; protected set; } =  default(HttpContentHeaders);
+        public static ApiResult<T> Fail(Exception exception, HttpContentHeaders httpContentHeaders)
         {
             return new ApiResult<T>()
             {
                 Data = default(T),
                 Error = exception,
-                ResponseHeaders = httpResponseHeaders
+                ResponseHeaders = httpContentHeaders
             };
 
         }
 
-        public static ApiResult<T> Ok(T data, HttpResponseHeaders httpResponseHeaders)
+        public static ApiResult<T> Ok(T data, HttpContentHeaders httpContentHeaders)
         {
             return new ApiResult<T>()
             {
                 Data = data,
                 Error = null,
-                ResponseHeaders = httpResponseHeaders
+                ResponseHeaders = httpContentHeaders
             };
         }
 

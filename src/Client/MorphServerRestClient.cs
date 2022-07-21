@@ -323,12 +323,12 @@ namespace Morph.Server.Sdk.Client
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var result = jsonSerializer.Deserialize<TResult>(content);
-                return ApiResult<TResult>.Ok(result, response.Headers);
+                return ApiResult<TResult>.Ok(result, response.Content.Headers);
             }
             else
             {
                 var error = await BuildExceptionFromResponse(response);
-                return ApiResult<TResult>.Fail(error, response.Headers);
+                return ApiResult<TResult>.Fail(error, response.Content.Headers);
             }
         }
 
@@ -420,7 +420,7 @@ namespace Morph.Server.Sdk.Client
             CancellationToken cancellationToken)
             where TResult : new()
         {
-            HttpResponseHeaders httpResponseHeaders = null;
+            HttpContentHeaders httpResponseHeaders = null;
             try
             {
                 string boundary = "MorphRestClient-Streaming--------" + Guid.NewGuid().ToString("N");
@@ -450,7 +450,7 @@ namespace Morph.Server.Sdk.Client
                                          cancellationToken))
                               {
                                   var result = await HandleResponse<TResult>(response);
-                                  httpResponseHeaders = response.Headers;
+                                  httpResponseHeaders = response.Content.Headers;
                                   serverPushStreaming.SetApiResult(result);
                               }
 
@@ -506,7 +506,7 @@ namespace Morph.Server.Sdk.Client
             CancellationToken cancellationToken)
         where TResult : new()
         {
-            HttpResponseHeaders httpResponseHeaders = null;
+            HttpContentHeaders httpResponseHeaders = null;
             try
             {
 
@@ -532,7 +532,7 @@ namespace Morph.Server.Sdk.Client
                                        HttpCompletionOption.ResponseHeadersRead,
                                        cancellationToken))
                             {
-                                httpResponseHeaders = response.Headers;
+                                httpResponseHeaders = response.Content.Headers;
                                 return await HandleResponse<TResult>(response);
                             }
 
@@ -627,7 +627,7 @@ namespace Morph.Server.Sdk.Client
                             }
 
                         });
-                        return ApiResult<FetchFileStreamData>.Ok(new FetchFileStreamData(streamWithProgress, realFileName, contentLength), response.Headers);
+                        return ApiResult<FetchFileStreamData>.Ok(new FetchFileStreamData(streamWithProgress, realFileName, contentLength), response.Content.Headers);
 
                     }
                 }
@@ -636,7 +636,7 @@ namespace Morph.Server.Sdk.Client
                     try
                     {
                         var error = await BuildExceptionFromResponse(response);
-                        return ApiResult<FetchFileStreamData>.Fail(error, response.Headers);
+                        return ApiResult<FetchFileStreamData>.Fail(error, response.Content.Headers);
                     }
                     finally
                     {
