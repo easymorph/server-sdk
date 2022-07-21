@@ -12,6 +12,8 @@ using Morph.Server.Sdk.Mappers;
 using Morph.Server.Sdk.Dto.Errors;
 using System.IO;
 using System.Linq;
+using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using Morph.Server.Sdk.Model;
 using Morph.Server.Sdk.Model.InternalModels;
 using Morph.Server.Sdk.Dto;
@@ -321,12 +323,12 @@ namespace Morph.Server.Sdk.Client
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var result = jsonSerializer.Deserialize<TResult>(content);
-                return ApiResult<TResult>.Ok(result);
+                return ApiResult<TResult>.Ok(result, response.Headers);
             }
             else
             {
                 var error = await BuildExceptionFromResponse(response);
-                return ApiResult<TResult>.Fail(error);
+                return ApiResult<TResult>.Fail(error, response.Headers);
             }
         }
 
@@ -418,6 +420,7 @@ namespace Morph.Server.Sdk.Client
             CancellationToken cancellationToken)
             where TResult : new()
         {
+            HttpResponseHeaders httpResponseHeaders = null;
             try
             {
                 string boundary = "MorphRestClient-Streaming--------" + Guid.NewGuid().ToString("N");
@@ -429,7 +432,7 @@ namespace Morph.Server.Sdk.Client
                 var serverPushStreaming = new ServerPushStreaming(streamContent);
                 content.Add(streamContent, "files", Path.GetFileName(startContiniousStreamingRequest.FileName));
 
-
+              
 
                 new Task(async () =>
                   {
@@ -447,24 +450,28 @@ namespace Morph.Server.Sdk.Client
                                          cancellationToken))
                               {
                                   var result = await HandleResponse<TResult>(response);
+                                  httpResponseHeaders = response.Headers;
                                   serverPushStreaming.SetApiResult(result);
                               }
 
                           }
                           catch (Exception ex) when (ex.InnerException != null &&
-                                ex.InnerException is WebException web &&
-                                web.Status == WebExceptionStatus.ConnectionClosed)
+                                                     ex.InnerException is WebException web &&
+                                                     web.Status == WebExceptionStatus.ConnectionClosed)
                           {
-                              serverPushStreaming.SetApiResult(ApiResult<TResult>.Fail(new MorphApiNotFoundException("Specified folder not found")));
+                              serverPushStreaming.SetApiResult(ApiResult<TResult>.Fail(
+                                  new MorphApiNotFoundException("Specified folder not found"), httpResponseHeaders));
                           }
                           catch (Exception e)
                           {
-                              serverPushStreaming.SetApiResult(ApiResult<TResult>.Fail(e));
+                              serverPushStreaming.SetApiResult(ApiResult<TResult>.Fail(e, httpResponseHeaders));
                           }
-
-                          //requestMessage.Dispose();
-                          streamContent.Dispose();
-                          content.Dispose();
+                          finally
+                          {
+                              //requestMessage.Dispose();
+                              streamContent.Dispose();
+                              content.Dispose();
+                          }
                       }
                       catch (Exception)
                       {
@@ -472,7 +479,7 @@ namespace Morph.Server.Sdk.Client
                       }
 
                   }).Start();
-                return ApiResult<ServerPushStreaming>.Ok(serverPushStreaming);
+                return ApiResult<ServerPushStreaming>.Ok(serverPushStreaming, httpResponseHeaders);
 
 
 
@@ -483,11 +490,11 @@ namespace Morph.Server.Sdk.Client
                     ex.InnerException is WebException web &&
                     web.Status == WebExceptionStatus.ConnectionClosed)
             {
-                return ApiResult<ServerPushStreaming>.Fail(new MorphApiNotFoundException("Specified folder not found"));
+                return ApiResult<ServerPushStreaming>.Fail(new MorphApiNotFoundException("Specified folder not found"), httpResponseHeaders);
             }
             catch (Exception e)
             {
-                return ApiResult<ServerPushStreaming>.Fail(e);
+                return ApiResult<ServerPushStreaming>.Fail(e, httpResponseHeaders);
             }
         }
 
@@ -499,6 +506,7 @@ namespace Morph.Server.Sdk.Client
             CancellationToken cancellationToken)
         where TResult : new()
         {
+            HttpResponseHeaders httpResponseHeaders = null;
             try
             {
 
@@ -524,6 +532,7 @@ namespace Morph.Server.Sdk.Client
                                        HttpCompletionOption.ResponseHeadersRead,
                                        cancellationToken))
                             {
+                                httpResponseHeaders = response.Headers;
                                 return await HandleResponse<TResult>(response);
                             }
 
@@ -535,11 +544,11 @@ namespace Morph.Server.Sdk.Client
                     ex.InnerException is WebException web &&
                     web.Status == WebExceptionStatus.ConnectionClosed)
             {
-                return ApiResult<TResult>.Fail(new MorphApiNotFoundException("Specified folder not found"));
+                return ApiResult<TResult>.Fail(new MorphApiNotFoundException("Specified folder not found"), httpResponseHeaders);
             }
             catch (Exception e)
             {
-                return ApiResult<TResult>.Fail(e);
+                return ApiResult<TResult>.Fail(e, httpResponseHeaders);
             }
         }
 
@@ -618,7 +627,7 @@ namespace Morph.Server.Sdk.Client
                             }
 
                         });
-                        return ApiResult<FetchFileStreamData>.Ok(new FetchFileStreamData(streamWithProgress, realFileName, contentLength));
+                        return ApiResult<FetchFileStreamData>.Ok(new FetchFileStreamData(streamWithProgress, realFileName, contentLength), response.Headers);
 
                     }
                 }
@@ -627,7 +636,7 @@ namespace Morph.Server.Sdk.Client
                     try
                     {
                         var error = await BuildExceptionFromResponse(response);
-                        return ApiResult<FetchFileStreamData>.Fail(error);
+                        return ApiResult<FetchFileStreamData>.Fail(error, response.Headers);
                     }
                     finally
                     {
