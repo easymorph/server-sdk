@@ -15,7 +15,7 @@ namespace Morph.Server.Sdk.Mappers
 
             return new SpaceFilesQuickSearchRequestDto
             {
-                FileExtensions = request.FileExtensions?.ToArray() ?? Array.Empty<string>(),
+                FileExtensions = request.FileExtensions ?? Array.Empty<string>(),
                 FolderPath = request.FolderPath,
                 LookupString = request.LookupString
             };

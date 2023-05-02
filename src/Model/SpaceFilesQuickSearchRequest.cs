@@ -21,7 +21,7 @@ namespace Morph.Server.Sdk.Model
         /// An empty string value is used to look up files with no extensions.
         /// </summary>
         
-        public List<string> FileExtensions { get; set; } = new List<string>();
+        public string[] FileExtensions { get; set; }
 
         /// <summary>
         /// The folder path for lookup startup. Search will be run only in this folder and all nested folders.
