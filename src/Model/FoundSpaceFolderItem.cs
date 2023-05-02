@@ -1,4 +1,6 @@
-﻿namespace Morph.Server.Sdk.Model
+﻿using System;
+
+namespace Morph.Server.Sdk.Model
 {
     public class FoundSpaceFolderItem
     {
@@ -9,7 +11,7 @@
         /// <summary>
         /// Folder's last modified date.
         /// </summary>
-        public string LastModified { get; set; }
+        public DateTime LastModified { get; set; }
 
         /// <summary>
         /// Folder path to the specified base folder (Public folder).

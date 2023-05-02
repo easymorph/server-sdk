@@ -4,16 +4,16 @@ using System;
 
 namespace Morph.Server.Sdk.Mappers
 {
-    internal static class FilesQuickSearchRequestMapper
+    internal static class SpaceFilesQuickSearchRequestMapper
     {
-        internal static FilesQuickSearchRequestDto ToDto(FilesQuickSearchRequest request)
+        internal static SpaceFilesQuickSearchRequestDto ToDto(SpaceFilesQuickSearchRequest request)
         {
             if (request is null)
             {
                 throw new ArgumentNullException(nameof(request));
             }
 
-            return new FilesQuickSearchRequestDto
+            return new SpaceFilesQuickSearchRequestDto
             {
                 FileExtensions = request.FileExtensions?.ToArray() ?? Array.Empty<string>(),
                 FolderPath = request.FolderPath,

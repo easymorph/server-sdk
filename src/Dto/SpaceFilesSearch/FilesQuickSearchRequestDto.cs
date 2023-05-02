@@ -3,7 +3,8 @@
 namespace Morph.Server.Sdk.Dto.SpaceFilesSearch
 {
     [DataContract]
-    internal sealed class FilesQuickSearchRequestDto
+    internal sealed class SpaceFilesQuickSearchRequestDto
+
 
     {
         /// <summary>

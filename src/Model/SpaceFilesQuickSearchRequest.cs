@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace Morph.Server.Sdk.Model
 {
-    public class FilesQuickSearchRequest
+    public class SpaceFilesQuickSearchRequest
     {
         /// <summary>
         /// Lookup string. It may include multiple search terms split by space char.

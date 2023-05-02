@@ -1,6 +1,6 @@
 ﻿namespace Morph.Server.Sdk.Model
 {
-    public class FilesQuickSearchResponse
+    public class SpaceFilesQuickSearchResponse
     {
 
         public FoundSpaceFolderItem[] Values { get; set; }

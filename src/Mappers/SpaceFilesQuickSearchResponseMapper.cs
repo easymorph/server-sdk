@@ -6,11 +6,11 @@ using System.Linq;
 
 namespace Morph.Server.Sdk.Mappers
 {
-    internal static class FilesQuickSearchResponseMapper
+    internal static class SpaceFilesQuickSearchResponseMapper
     {
-        public static FilesQuickSearchResponse MapFromDto(FilesQuickSearchResponseDto dto)
+        public static SpaceFilesQuickSearchResponse MapFromDto(SpaceFilesQuickSearchResponseDto dto)
         {
-            return new FilesQuickSearchResponse
+            return new SpaceFilesQuickSearchResponse
             {
                 HasMore = dto.HasMore,
                 Values = dto.Values.Select(Map).ToArray()
@@ -28,7 +28,7 @@ namespace Morph.Server.Sdk.Mappers
             {
                 Files = dto.Files.Select(MapFile).ToArray(),
                 Name = dto.Name,
-                LastModified = dto.LastModified,
+                LastModified = DateTime.Parse(dto.LastModified),
                 Path = dto.Path
             };
         }
@@ -40,7 +40,7 @@ namespace Morph.Server.Sdk.Mappers
                 Extension = dto.Extension,
                 FileSizeBytes = dto.FileSizeBytes,
                 Highlights = dto.Highlights,
-                LastModified = dto.LastModified,
+                LastModified = DateTime.Parse(dto.LastModified),
                 Name = dto.Name
             };
         }

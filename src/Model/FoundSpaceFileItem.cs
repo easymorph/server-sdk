@@ -1,4 +1,6 @@
-﻿namespace Morph.Server.Sdk.Model
+﻿using System;
+
+namespace Morph.Server.Sdk.Model
 {
     public class FoundSpaceFileItem
     {
@@ -18,7 +20,7 @@
         /// <summary>
         /// Last file modification date
         /// </summary>
-        public string LastModified { get; set; }
+        public DateTime LastModified { get; set; }
 
         /// <summary>
         /// Highlights. A plain array of tuples.

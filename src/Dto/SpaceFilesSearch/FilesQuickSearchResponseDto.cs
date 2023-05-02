@@ -9,7 +9,8 @@ namespace Morph.Server.Sdk.Dto.SpaceFilesSearch
 {
 
     [DataContract] 
-    internal sealed class FilesQuickSearchResponseDto
+    internal sealed class SpaceFilesQuickSearchResponseDto
+
     {
 
         [DataMember(Name = "hasMore")]
