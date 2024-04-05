@@ -13,7 +13,7 @@ namespace Morph.Server.Sdk.Mappers
 
     internal static class TaskParameterMapper
     {
-        public static TaskParameterBase FromDto(TaskParameterResponseDto dto)
+        public static ParameterBase FromDto(TaskParameterResponseDto dto)
         {
             if (dto == null)
             {
@@ -24,29 +24,29 @@ namespace Morph.Server.Sdk.Mappers
             switch (parameterType)
             {
                 case TaskParameterType.Text: 
-                    return new TaskTextParameter(dto.Name, dto.Value) { Note = dto.Note };
+                    return new TextParameter(dto.Name, dto.Value) { Note = dto.Note };
 
                 case TaskParameterType.Date:
-                    return new TaskDateParameter(dto.Name, dto.Value) { Note = dto.Note };
+                    return new DateParameter(dto.Name, dto.Value) { Note = dto.Note };
 
                 case TaskParameterType.FilePath:
-                    return new TaskFilePathParameter(dto.Name, dto.Value) { Note = dto.Note };
+                    return new FilePathParameter(dto.Name, dto.Value) { Note = dto.Note };
 
                 case TaskParameterType.FolderPath:
-                    return new TaskFolderPathParameter(dto.Name, dto.Value) { Note = dto.Note };
+                    return new FolderPathParameter(dto.Name, dto.Value) { Note = dto.Note };
 
                 case TaskParameterType.Checkbox:
-                    return new TaskCheckboxParameter(dto.Name, dto.Value) { Note = dto.Note };
+                    return new CheckboxParameter(dto.Name, dto.Value) { Note = dto.Note };
 
                 case TaskParameterType.FixedList:
-                    return new TaskFixedListParameter(dto.Name, dto.Value, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
+                    return new FixedListParameter(dto.Name, dto.Value, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
 
                 case TaskParameterType.MultipleChoice:
-                    return new TaskMultipleChoiceParameter(dto.Name, dto.Value, dto.Details?.SepatatorString, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
+                    return new MultipleChoiceParameter(dto.Name, dto.Value, dto.Details?.SepatatorString, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
 
 
                 default:
-                    return new TaskTextParameter(dto.Name, dto.Value) { Note = dto.Note };
+                    return new TextParameter(dto.Name, dto.Value) { Note = dto.Note };
             }
 
            
@@ -69,7 +69,7 @@ namespace Morph.Server.Sdk.Mappers
             return (TaskParameterType)Enum.Parse(typeof(TaskParameterType), value, true);
         }
 
-        public static TaskParameterRequestDto ToDto(TaskParameterBase value)
+        public static TaskParameterRequestDto ToDto(ParameterBase value)
         {
             if (value == null)
             {
@@ -87,8 +87,27 @@ namespace Morph.Server.Sdk.Mappers
             return result;
             
         }
+        public static TaskParameterRequestDto ToDto(ParameterNameValue parameterNameValue)
+        {
+            if (parameterNameValue == null)
+            {
+                throw new ArgumentNullException(nameof(parameterNameValue));
+            }
 
-       
+            var result = new TaskParameterRequestDto()
+            {
+                Name = parameterNameValue.Name,
+                Value = parameterNameValue.Value
+
+            };
+
+
+            return result;
+
+        }
+
+
 
     }
+
 }

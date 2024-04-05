@@ -20,7 +20,7 @@ namespace Morph.Server.Sdk.Model
 
     public sealed class SpaceTask : SpaceTasksListItem
     {
-        public List<TaskParameterBase> TaskParameters { get; internal set; } = new List<TaskParameterBase>();
+        public List<ParameterBase> TaskParameters { get; internal set; } = new List<ParameterBase>();
     }
 
     public sealed class TaskSchedule
