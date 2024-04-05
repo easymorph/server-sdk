@@ -23,23 +23,41 @@ namespace Morph.Server.Sdk.Mappers
             var parameterType = ParseParameterType(dto.ParameterType);
             switch (parameterType)
             {
-                case TaskParameterType.Text: return new TaskStringParameter(dto.Name, dto.Value) { Note = dto.Note };
+                case TaskParameterType.Text: 
+                    return new TaskTextParameter(dto.Name, dto.Value) { Note = dto.Note };
+
                 case TaskParameterType.Date:
-                    DateTime dt;
-                    DateTime? dtn = null;
-                    bool res = DateTime.TryParseExact(dto.Value, TaskDateParameter.dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out dt);
-                    if (res)
-                        dtn = dt;
-                    return new TaskDateParameter(dto.Name, dtn) { Note = dto.Note };
+                    return new TaskDateParameter(dto.Name, dto.Value) { Note = dto.Note };
+
                 case TaskParameterType.FilePath:
                     return new TaskFilePathParameter(dto.Name, dto.Value) { Note = dto.Note };
+
                 case TaskParameterType.FolderPath:
                     return new TaskFolderPathParameter(dto.Name, dto.Value) { Note = dto.Note };
+
+                case TaskParameterType.Checkbox:
+                    return new TaskCheckboxParameter(dto.Name, dto.Value) { Note = dto.Note };
+
+                case TaskParameterType.FixedList:
+                    return new TaskFixedListParameter(dto.Name, dto.Value, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
+
+                case TaskParameterType.MultipleChoice:
+                    return new TaskMultipleChoiceParameter(dto.Name, dto.Value, dto.Details?.SepatatorString, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
+
+
                 default:
-                    return new TaskStringParameter(dto.Name, dto.Value) { Note = dto.Note };
+                    return new TaskTextParameter(dto.Name, dto.Value) { Note = dto.Note };
             }
 
            
+        }
+
+        private static MorphParameterValueListItem[] MapAvailableValues(MorphParameterValueListItemDto[] availableValues)
+        {
+            if (availableValues == null)
+                return new MorphParameterValueListItem[] { };
+
+            return availableValues.Select(x => new MorphParameterValueListItem(x.Label, x.Value)).ToArray();
         }
 
         private static TaskParameterType ParseParameterType(string value)
@@ -66,17 +84,6 @@ namespace Morph.Server.Sdk.Mappers
             };
 
 
-            //switch (value)
-            //{
-            //    case TaskStringParameter str:
-            //        result.Value = str.Value as string;
-            //        break;
-            //    case TaskDateParameter st:
-            //        DateTime dt = Convert.ToDateTime(st.Value);
-            //        result.Value = dt.ToString("yyyy-MM-dd");
-            //        break;
-            //    default: throw new NotImplementedException($"{value.ToString()} is not supported");
-            //}
             return result;
             
         }

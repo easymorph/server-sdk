@@ -64,7 +64,12 @@ namespace Morph.Server.Sdk.Client
             }
 
             var url = UrlHelper.JoinUrl("space", apiSession.SpaceName, "tasks", taskId.ToString("D"));
-            return apiClient.GetAsync<TaskFullDto>(url, null, apiSession.ToHeadersCollection(), cancellationToken);
+            // client supports extended parameters data
+            var urlParameters = new NameValueCollection
+            {
+                { "mode", "extended" },
+            };
+            return apiClient.GetAsync<TaskFullDto>(url, urlParameters, apiSession.ToHeadersCollection(), cancellationToken);
         }
 
         public Task<ApiResult<TasksListDto>> GetTasksListAsync(ApiSession apiSession, CancellationToken cancellationToken)
@@ -75,6 +80,7 @@ namespace Morph.Server.Sdk.Client
             }
 
             var url = UrlHelper.JoinUrl("space", apiSession.SpaceName, "tasks");
+
             return apiClient.GetAsync<TasksListDto>(url, null, apiSession.ToHeadersCollection(), cancellationToken);
         }
 
@@ -90,8 +96,13 @@ namespace Morph.Server.Sdk.Client
 
             var spaceName = apiSession.SpaceName;
             var url = UrlHelper.JoinUrl("space", spaceName, "tasks", taskId.ToString("D"), "changeMode");
+            // client supports extended parameters data
+            var urlParameters = new NameValueCollection
+            {
+                { "mode", "extended" },
+            };
 
-            return apiClient.PostAsync<SpaceTaskChangeModeRequestDto, TaskFullDto>(url, requestDto, null, apiSession.ToHeadersCollection(), cancellationToken);
+            return apiClient.PostAsync<SpaceTaskChangeModeRequestDto, TaskFullDto>(url, requestDto, urlParameters, apiSession.ToHeadersCollection(), cancellationToken);
         }
 
         public Task<ApiResult<ServerStatusDto>> ServerGetStatusAsync(CancellationToken cancellationToken)
