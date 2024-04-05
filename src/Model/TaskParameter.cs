@@ -50,7 +50,7 @@ namespace Morph.Server.Sdk.Model
         }
     }
 
-    public abstract class TaskParameterBase
+    public class TaskParameterBase
     {   
 
         public string Name { get; } = string.Empty;
