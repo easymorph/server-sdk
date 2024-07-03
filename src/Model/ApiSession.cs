@@ -1,5 +1,6 @@
 ﻿using Morph.Server.Sdk.Client;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,58 +13,103 @@ namespace Morph.Server.Sdk.Model
     /// <summary>
     /// Disposable api session
     /// </summary>
-    public  class ApiSession : IDisposable
+    /// 
+
+
+
+    public class ApiSessionFactory
     {
-        protected readonly string _defaultSpaceName = "default";
-        public const string AuthHeaderName = "X-EasyMorph-Auth";
-
-        public bool IsClosed { get; internal set; }
-        public string SpaceName
-        {
-            get =>
-string.IsNullOrWhiteSpace(_spaceName) ? _defaultSpaceName : _spaceName.ToLower();
-            internal set => _spaceName = value;
-        }
-        public string AuthToken { get;  internal set; }
-        public bool IsAnonymous { get; internal set; }
-
-        ICanCloseSession _client;
-        private string _spaceName;
-        private SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
-
-       /// <summary>
-       /// Api session constructor
-       /// </summary>
-       /// <param name="client">reference to client </param>
-        public ApiSession(ICanCloseSession client)
-        {
-            _client = client ?? throw new ArgumentNullException(nameof(client));
-            IsClosed = false;
-            IsAnonymous = false;
-
-        }
-
-
-        internal static ApiSession Anonymous(ICanCloseSession client, string spaceName)
-        {
-            if (client == null)
+        public static AnonymousSession CreateAnonymous()
+        {   
+            return new AnonymousSession()
             {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (string.IsNullOrWhiteSpace(spaceName))
-            {
-                throw new ArgumentException("Value is empty {0}", nameof(spaceName));
-            }
-
-            return new ApiSession(client)
-            {
-                IsAnonymous = true,
-                IsClosed = false,
-                SpaceName = spaceName
+                
             };
 
         }
+
+        public static LegacyApiSession CreateLegacySession(ICanCloseSession canCloseSession, string authToken)
+        {
+            return new LegacyApiSession(canCloseSession, authToken);
+        }
+    }
+
+
+    public abstract class ApiSession : IDisposable
+    {
+        public const string AuthHeaderName = "X-EasyMorph-Auth";
+        public string AuthToken { get; protected set; }
+
+        public bool IsAnonymous { get; }
+        protected ApiSession(string authToken)
+        {
+            IsAnonymous =string.IsNullOrEmpty(authToken);
+            AuthToken = authToken;
+        }
+
+        public virtual void Dispose()
+        {
+            //throw new NotImplementedException();
+        }
+
+        /// <summary>
+        ///     Import authentication data from other token
+        /// </summary>
+        /// <param name="freshSession">Session to import from</param>
+        /// <exception cref="ArgumentNullException"><see cref="freshSession"/> is null</exception>
+        public void FillFrom(ApiSession freshSession)
+        {
+            if (freshSession == null) throw new ArgumentNullException(nameof(freshSession));
+
+            AuthToken = freshSession.AuthToken;
+        }
+    }
+
+
+    public class AnonymousSession: ApiSession
+    {
+        public AnonymousSession():base(null)
+        {
+         
+        }
+    }
+
+
+
+
+    public class RobustApiSession : ApiSession
+    {
+        public RobustApiSession(string authToken) : base(authToken)
+        {
+        }
+    }
+
+
+    public class LegacyApiSession : ApiSession
+    {
+
+        public bool IsClosed { get; internal set; }
+
+
+        ICanCloseSession _client;
+
+        private SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+
+        /// <summary>
+        /// Api session constructor
+        /// </summary>
+        /// <param name="client">reference to client </param>
+        public LegacyApiSession(ICanCloseSession client, string authToken): 
+            base(authToken?? throw new ArgumentException("AuthToken must be set"))
+        {
+            _client = client ?? throw new ArgumentNullException(nameof(client));
+            IsClosed = false;
+
+
+        }
+
+
+
 
 
         public async Task CloseSessionAsync(CancellationToken cancellationToken)
@@ -83,7 +129,7 @@ string.IsNullOrWhiteSpace(_spaceName) ? _defaultSpaceName : _spaceName.ToLower()
         private async Task _InternalCloseSessionAsync(CancellationToken cancellationToken)
         {
             // don't close if session is already closed or anon.            
-            if(IsClosed || _client == null || IsAnonymous)
+            if (IsClosed || _client == null || IsAnonymous)
             {
                 return;
             }
@@ -111,10 +157,12 @@ string.IsNullOrWhiteSpace(_spaceName) ? _defaultSpaceName : _spaceName.ToLower()
             }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             try
             {
+                base.Dispose();
+
                 if (_lock != null)
                 {
                     _lock.Wait(5000);
@@ -151,17 +199,9 @@ string.IsNullOrWhiteSpace(_spaceName) ? _defaultSpaceName : _spaceName.ToLower()
 
             }
         }
-
-        /// <summary>
-        ///     Import authentication data from other token
-        /// </summary>
-        /// <param name="freshSession">Session to import from</param>
-        /// <exception cref="ArgumentNullException"><see cref="freshSession"/> is null</exception>
-        public void FillFrom(ApiSession freshSession)
-        {
-            if (freshSession == null) throw new ArgumentNullException(nameof(freshSession));
-
-            AuthToken = freshSession.AuthToken;
-        }
     }
+
+
 }
+
+

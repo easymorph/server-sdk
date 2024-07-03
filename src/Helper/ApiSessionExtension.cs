@@ -8,7 +8,7 @@ namespace Morph.Server.Sdk.Helper
         public static HeadersCollection ToHeadersCollection(this ApiSession apiSession)
         {
             var collection = new HeadersCollection();
-            if (apiSession != null && !apiSession.IsAnonymous && !apiSession.IsClosed)
+            if (apiSession != null && !apiSession.IsAnonymous)
             {
                 collection.Add(ApiSession.AuthHeaderName, apiSession.AuthToken);
             }

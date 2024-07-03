@@ -32,110 +32,145 @@ namespace Morph.Server.Sdk.Client
         Task<ApiSession> OpenSessionAsync(OpenSessionRequest openSessionRequest, CancellationToken cancellationToken);
 
         /*COMPUTATIONS*/
-        Task<ComputationDetailedItem> StartTaskAsync(ApiSession apiSession, StartTaskRequest startTaskRequest,
+        Task<ComputationDetailedItem> StartTaskAsync(ApiSession apiSession, 
+            string spaceName, StartTaskRequest startTaskRequest,
             CancellationToken cancellationToken);
 
-        Task<ComputationDetailedItem> GetComputationDetailsAsync(ApiSession apiSession, string computationId,
+        Task<ComputationDetailedItem> GetComputationDetailsAsync(ApiSession apiSession, 
+            string spaceName, string computationId,
             CancellationToken cancellationToken);
 
-        Task CancelComputationAsync(ApiSession apiSession, string computationId, CancellationToken cancellationToken);
+        Task CancelComputationAsync(ApiSession apiSession, 
+            string spaceName, string computationId, CancellationToken cancellationToken);
 
-        Task<WorkflowResultDetails> GetWorkflowResultDetailsAsync(ApiSession apiSession, string resultToken,
+        Task<WorkflowResultDetails> GetWorkflowResultDetailsAsync(ApiSession apiSession, 
+            string spaceName, string resultToken,
             CancellationToken cancellationToken);
 
-        Task AcknowledgeWorkflowResultAsync(ApiSession apiSession, string resultToken,
+        Task AcknowledgeWorkflowResultAsync(ApiSession apiSession, 
+            string spaceName, string resultToken,
             CancellationToken cancellationToken);
 
 
-        Task<SpaceTask> TaskChangeModeAsync(ApiSession apiSession, Guid taskId,
+        Task<SpaceTask> TaskChangeModeAsync(ApiSession apiSession, 
+            string spaceName, Guid taskId,
             TaskChangeModeRequest taskChangeModeRequest, CancellationToken cancellationToken);
 
-        Task<ValidateTasksResult> ValidateTasksAsync(ApiSession apiSession, string projectPath,
+        Task<ValidateTasksResult> ValidateTasksAsync(ApiSession apiSession,
+            string spaceName, string projectPath,
             CancellationToken cancellationToken);
 
         Task<SpacesEnumerationList> GetSpacesListAsync(CancellationToken cancellationToken);
         Task<SpacesLookupResponse> SpacesLookupAsync(SpacesLookupRequest request, CancellationToken cancellationToken);
 
-        Task<SpaceStatus> GetSpaceStatusAsync(ApiSession apiSession, CancellationToken cancellationToken);
-        Task<SpaceTasksList> GetTasksListAsync(ApiSession apiSession, CancellationToken cancellationToken);
-        Task<SpaceTask> GetTaskAsync(ApiSession apiSession, Guid taskId, CancellationToken cancellationToken);
+        Task<SpaceStatus> GetSpaceStatusAsync(ApiSession apiSession, string spaceName, CancellationToken cancellationToken);
+        Task<SpaceTasksList> GetTasksListAsync(ApiSession apiSession,
+            string spaceName, CancellationToken cancellationToken);
+        Task<SpaceTask> GetTaskAsync(ApiSession apiSession, 
+            string spaceName, Guid taskId, CancellationToken cancellationToken);
 
-        Task<SpaceBrowsingInfo> SpaceBrowseAsync(ApiSession apiSession, string folderPath,
+        Task<SpaceBrowsingInfo> SpaceBrowseAsync(ApiSession apiSession, 
+            string spaceName, string folderPath,
             CancellationToken cancellationToken);
 
         Task<SpaceFilesQuickSearchResponse> SpaceFilesQuickSearchAsync(ApiSession apiSession,
+            string spaceName,
             SpaceFilesQuickSearchRequest request,
             CancellationToken cancellationToken,
             int? offset = null, int? limit = null);
 
-        Task SpaceDeleteFileAsync(ApiSession apiSession, string remoteFilePath, CancellationToken cancellationToken);
+        Task SpaceDeleteFileAsync(ApiSession apiSession,
+            string spaceName, string remoteFilePath, CancellationToken cancellationToken);
 
-        Task SpaceDeleteFolderAsync(ApiSession apiSession, string serverFolderPath, bool failIfNotExists,
+        Task SpaceDeleteFolderAsync(ApiSession apiSession, 
+            string spaceName, string serverFolderPath, bool failIfNotExists,
             CancellationToken cancellationToken);
 
-        Task SpaceCreateFolderAsync(ApiSession apiSession, string parentFolderPath,
+        Task SpaceCreateFolderAsync(ApiSession apiSession,
+            string spaceName, string parentFolderPath,
             string folderName, bool failIfExists, CancellationToken cancellationToken);
 
-        Task SpaceRenameFileAsync(ApiSession apiSession, string parentFolderPath, string oldFileName,
+        Task SpaceRenameFileAsync(ApiSession apiSession,
+            string spaceName, string parentFolderPath, string oldFileName,
             string newFileName,
             CancellationToken cancellationToken);
 
-        Task SpaceRenameFolderAsync(ApiSession apiSession, string parentFolderPath, string oldFolderName,
+        Task SpaceRenameFolderAsync(ApiSession apiSession, 
+            string spaceName, string parentFolderPath, string oldFolderName,
             string newFolderName,
             bool failIfExists, CancellationToken cancellationToken);
 
-        Task<bool> SpaceFileExistsAsync(ApiSession apiSession, string remoteFilePath,
+        Task<bool> SpaceFileExistsAsync(ApiSession apiSession,
+            string spaceName,
+            string remoteFilePath,
             CancellationToken cancellationToken);
 
-        Task<ServerStreamingData> SpaceOpenStreamingDataAsync(ApiSession apiSession, string remoteFilePath,
+        Task<ServerStreamingData> SpaceOpenStreamingDataAsync(ApiSession apiSession,
+            string spaceName,
+            string remoteFilePath,
             CancellationToken cancellationToken);
 
-        Task<Stream> SpaceOpenDataStreamAsync(ApiSession apiSession, string remoteFilePath,
+        Task<Stream> SpaceOpenDataStreamAsync(ApiSession apiSession,
+            string spaceName, string remoteFilePath,
             CancellationToken cancellationToken);
 
-        Task SpaceUploadDataStreamAsync(ApiSession apiSession, SpaceUploadDataStreamRequest spaceUploadFileRequest,
+        Task SpaceUploadDataStreamAsync(ApiSession apiSession,
+            string spaceName,
+            SpaceUploadDataStreamRequest spaceUploadFileRequest,
             CancellationToken cancellationToken);
 
         Task SpaceUploadPushDataStreamAsync(ApiSession apiSession,
+            string spaceName,
             SpaceUploadContiniousStreamRequest continuousStreamRequest, PushStreamCallback pushStreamCallback,
             CancellationToken cancellationToken);
 
 
         [Obsolete("Obsolete due to flaw in response checking. Use SpaceUploadPushDataStreamAsync instead.")]
         Task<ContiniousStreamingConnection> SpaceUploadContiniousStreamingAsync(ApiSession apiSession,
+            string spaceName,
             SpaceUploadContiniousStreamRequest continiousStreamRequest, CancellationToken cancellationToken);
 
         /// <summary>
         ///     Set a value for a shared memory item
         /// </summary>
         /// <param name="apiSession"></param>
+        /// <param name="spaceName"></param>
         /// <param name="key">Key</param>
         /// <param name="value">Value to set</param>
         /// <param name="overwriteBehavior">What to do if key already exists</param>
         /// <param name="token">Cancellation token</param>
         /// <returns>Resulting value</returns>
-        Task<SharedMemoryValue> SharedMemoryRemember(ApiSession apiSession, string key, SharedMemoryValue value,
+        Task<SharedMemoryValue> SharedMemoryRemember(ApiSession apiSession,
+            string spaceName,
+            string key,
+            SharedMemoryValue value,
             OverwriteBehavior overwriteBehavior, CancellationToken token);
 
         /// <summary>
         ///     Get value of a shared memory item
         /// </summary>
         /// <param name="apiSession"></param>
+        /// <param name="spaceName"></param>
         /// <param name="key">Key</param>
         /// <param name="token">Cancellation token</param>
         /// <returns>Value</returns>
-        Task<SharedMemoryValue> SharedMemoryRecall(ApiSession apiSession, string key, CancellationToken token);
+        Task<SharedMemoryValue> SharedMemoryRecall(ApiSession apiSession,
+            string spaceName, 
+            string key, CancellationToken token);
 
         /// <summary>
         ///     List shared memory values
         /// </summary>
         /// <param name="apiSession"></param>
+        /// <param name="spaceName"></param>
         /// <param name="startsWith">Key prefix</param>
         /// <param name="offset">Offset</param>
         /// <param name="limit">Limit</param>
         /// <param name="token">Cancellation token</param>
         /// <returns>List of values</returns>
-        Task<SharedMemoryListResponse> SharedMemoryList(ApiSession apiSession, string startsWith, int offset,
+        Task<SharedMemoryListResponse> SharedMemoryList(ApiSession apiSession,
+            string spaceName,
+            string startsWith, int offset,
             int limit,
             CancellationToken token);
 
@@ -143,9 +178,12 @@ namespace Morph.Server.Sdk.Client
         ///     Delete a shared memory item
         /// </summary>
         /// <param name="apiSession"></param>
+        /// <param name="spaceName"></param>
         /// <param name="key">Key</param>
         /// <param name="token">Cancellation token</param>
         /// <returns>Number of deleted items</returns>
-        Task<int> SharedMemoryForget(ApiSession apiSession, string key, CancellationToken token);
+        Task<int> SharedMemoryForget(ApiSession apiSession,
+            string spaceName,
+            string key, CancellationToken token);
     }
 }

@@ -25,7 +25,7 @@ namespace Morph.Server.Sdk.Client
             {
                 // anon space
                 case SpaceAccessRestriction.None:
-                    return ApiSession.Anonymous(context.MorphServerApiClient, openSessionRequest.SpaceName);
+                    return ApiSessionFactory.CreateAnonymous();
 
                 // password protected space                
                 case SpaceAccessRestriction.BasicPassword:
@@ -41,7 +41,7 @@ namespace Morph.Server.Sdk.Client
                     //  if space is public or password is not set - open anon session
                     if (desiredSpace.IsPublic || string.IsNullOrWhiteSpace(openSessionRequest.Password))
                     {
-                        return ApiSession.Anonymous(context.MorphServerApiClient, openSessionRequest.SpaceName);
+                        return ApiSessionFactory.CreateAnonymous();
                     }
                     // otherwise open session via space password
                     else
@@ -76,13 +76,7 @@ namespace Morph.Server.Sdk.Client
                 var serverNonce = await internalGetAuthNonceAsync(ntmlRestApiClient, cancellationToken);
                 var token = await internalAuthExternalWindowAsync(ntmlRestApiClient, spaceName, serverNonce, cancellationToken);
 
-                return new ApiSession(context.MorphServerApiClient)
-                {
-                    AuthToken = token,
-                    IsAnonymous = false,
-                    IsClosed = false,
-                    SpaceName = spaceName
-                };
+                return ApiSessionFactory.CreateLegacySession(context.MorphServerApiClient, token);
             }
         }
         static async Task<string> internalGetAuthNonceAsync(IRestClient apiClient, CancellationToken cancellationToken)
@@ -149,16 +143,11 @@ namespace Morph.Server.Sdk.Client
             };
             var authApiResult = await context.LowLevelApiClient.AuthLoginPasswordAsync(requestDto, cancellationToken);
             authApiResult.ThrowIfFailed();
-            var token = authApiResult.Data.Token;           
-            
+            var token = authApiResult.Data.Token;
 
-            return new ApiSession(context.MorphServerApiClient)
-            {
-                AuthToken = token,
-                IsAnonymous = false,
-                IsClosed = false,
-                SpaceName = spaceName
-            };
+
+            return ApiSessionFactory.CreateLegacySession(context.MorphServerApiClient, token);
+             
         }
 
 
