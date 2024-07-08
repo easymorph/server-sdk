@@ -10,47 +10,24 @@ using System.Threading.Tasks;
 
 namespace Morph.Server.Sdk.Model
 {
-    /// <summary>
-    /// Disposable api session
-    /// </summary>
-    /// 
-
-
-
-    public class ApiSessionFactory
-    {
-        public static AnonymousSession CreateAnonymous()
-        {   
-            return new AnonymousSession()
-            {
-                
-            };
-
-        }
-
-        public static LegacyApiSession CreateLegacySession(ICanCloseSession canCloseSession, string authToken)
-        {
-            return new LegacyApiSession(canCloseSession, authToken);
-        }
-    }
 
 
     public abstract class ApiSession : IDisposable
     {
         public const string AuthHeaderName = "X-EasyMorph-Auth";
+
+        
         public string AuthToken { get; protected set; }
 
         public bool IsAnonymous { get; }
         protected ApiSession(string authToken)
         {
             IsAnonymous =string.IsNullOrEmpty(authToken);
+            
             AuthToken = authToken;
         }
 
-        public virtual void Dispose()
-        {
-            //throw new NotImplementedException();
-        }
+        public abstract void Dispose();
 
         /// <summary>
         ///     Import authentication data from other token
@@ -66,47 +43,71 @@ namespace Morph.Server.Sdk.Model
     }
 
 
-    public class AnonymousSession: ApiSession
+    public sealed class AnonymousSession : ApiSession
     {
-        public AnonymousSession():base(null)
+        public AnonymousSession() : base(null)
         {
          
+        }
+
+        public override void Dispose()
+        {
+         // nothing to do
         }
     }
 
 
 
 
-    public class RobustApiSession : ApiSession
+    public class PersitableApiSession : ApiSession
     {
-        public RobustApiSession(string authToken) : base(authToken)
+        public PersitableApiSession(string authToken) : base(authToken)
         {
         }
+
+        public override void Dispose()
+        {
+            // nothing to do
+        }
+
+        // TODO: serialization/deserialization
     }
 
 
     public class LegacyApiSession : ApiSession
     {
 
+        protected readonly string _defaultSpaceName = "default";
         public bool IsClosed { get; internal set; }
 
 
         ICanCloseSession _client;
+        private string _spaceName;
 
         private SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+
+        public string SpaceName => _spaceName;
 
         /// <summary>
         /// Api session constructor
         /// </summary>
         /// <param name="client">reference to client </param>
-        public LegacyApiSession(ICanCloseSession client, string authToken): 
+        public LegacyApiSession(ICanCloseSession client,string spaceName,  string authToken): 
             base(authToken?? throw new ArgumentException("AuthToken must be set"))
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             IsClosed = false;
 
+            if (string.IsNullOrEmpty(spaceName))
+            {
+                _spaceName = _defaultSpaceName;
+            }
+            else
+            {
+                _spaceName = this._spaceName.ToLowerInvariant().Trim();
+            };
 
-        }
+    }
 
 
 
@@ -160,8 +161,7 @@ namespace Morph.Server.Sdk.Model
         public override void Dispose()
         {
             try
-            {
-                base.Dispose();
+            {   
 
                 if (_lock != null)
                 {

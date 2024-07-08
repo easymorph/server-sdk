@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Morph.Server.Sdk.Model
 {
-    public class OpenSessionRequest
+    public class OpenLegacySessionRequest
     {
         public string SpaceName{ get; set; }
         public string Password { get; set; }
@@ -15,6 +15,6 @@ namespace Morph.Server.Sdk.Model
         /// Create cloned request instance
         /// </summary>
         /// <returns>Memberwise clone</returns>
-        public OpenSessionRequest Clone() => (OpenSessionRequest)MemberwiseClone();
+        public OpenLegacySessionRequest Clone() => (OpenLegacySessionRequest)MemberwiseClone();
     }
 }

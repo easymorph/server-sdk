@@ -689,13 +689,31 @@ namespace Morph.Server.Sdk.Client
 
 
 
+        public Task<ApiSession> OpenSessionAsync(AnonymousIdP anonymousIdP, CancellationToken  cancellationToken)
+        {
+            if (anonymousIdP is null)
+            {
+                throw new ArgumentNullException(nameof(anonymousIdP));
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+
+            ApiSession session = ApiSessionFactory.CreateAnonymousSession();
+            return Task.FromResult(session);
+
+        }
+
+
+
+         
+
+
         /// <summary>
         /// Opens session based on required authentication mechanism
         /// </summary>
         /// <param name="openSessionRequest"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<ApiSession> OpenSessionAsync(OpenSessionRequest openSessionRequest, CancellationToken ct)
+        public async Task<ApiSession> OpenLegacySessionAsync(OpenLegacySessionRequest openSessionRequest, CancellationToken ct)
         {
             if (openSessionRequest == null)
             {
@@ -764,19 +782,25 @@ namespace Morph.Server.Sdk.Client
 
         }
 
-        private Authenticator CreateAuthenticator(OpenSessionRequest openSessionRequest, SpaceEnumerationItem desiredSpace)
+
+        private OpenSessionAuthenticatorContext CreateContext()
+        {
+            return new OpenSessionAuthenticatorContext(_lowLevelApiClient,
+                        this,
+                        (handler) =>
+                            ConstructRestApiClient(
+                                BuildHttpClient(clientConfiguration, handler),
+                                BuildBaseAddress(clientConfiguration), clientConfiguration));
+        }
+
+        private Authenticator CreateAuthenticator(OpenLegacySessionRequest openSessionRequest, SpaceEnumerationItem desiredSpace)
         {
             var requestClone = openSessionRequest.Clone();
 
             return async ctoken =>
             {
-                var response = await MorphServerAuthenticator.OpenSessionMultiplexedAsync(desiredSpace,
-                    new OpenSessionAuthenticatorContext(_lowLevelApiClient,
-                        this,
-                        (handler) =>
-                            ConstructRestApiClient(
-                                BuildHttpClient(clientConfiguration, handler),
-                                BuildBaseAddress(clientConfiguration), clientConfiguration)),
+                var response = await MorphServerLegacyAuthenticator.OpenLegacySessionMultiplexedAsync(desiredSpace,
+                    CreateContext(),
                     requestClone,
                     ctoken);
 
@@ -1003,6 +1027,103 @@ namespace Morph.Server.Sdk.Client
 
                 return Task.CompletedTask;
             }, cancellationToken, OperationType.FileTransfer);
+        }
+
+        public async Task<ApiSession> OpenSessionAsync(SpacePwdIdP provider, string spaceName, string password, CancellationToken ct)
+        {
+            if (provider is null)
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrWhiteSpace(spaceName))
+            {
+                throw new ArgumentException($"'{nameof(spaceName)}' cannot be null or whitespace.", nameof(spaceName));
+            }
+
+            if (string.IsNullOrEmpty(password))
+            {
+                throw new ArgumentException($"'{nameof(password)}' cannot be null or empty.", nameof(password));
+
+            }
+
+            return await OpenSessionWrapper(async (cancellationToken) =>
+            {
+                var session =
+                    await SpacePwdAuthenticator.OpenSessionViaSpacePasswordAsync(CreateContext(), spaceName, password, cancellationToken);
+                return session;
+
+            }, ct);
+        }
+
+        private async Task<ApiSession> OpenSessionWrapper(Func<CancellationToken, Task<ApiSession>> apiSessionFactory, CancellationToken ct)
+        {
+            using (var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct))
+            {
+
+                var timeout = clientConfiguration.SessionOpenTimeout;
+                linkedTokenSource.CancelAfter(timeout);
+                var cancellationToken = linkedTokenSource.Token;
+                try
+                {
+                    var apiSession = await apiSessionFactory(cancellationToken);
+
+                    return apiSession;
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested && linkedTokenSource.IsCancellationRequested)
+                {
+                    throw new Exception($"Can't connect to host {clientConfiguration.ApiUri}.  Operation timeout ({timeout})");
+                }
+            }
+        }
+
+        public async Task<ApiSession> OpenSessionAsync(InternalIdP provider, string userName, string password, bool keepSignedIn, CancellationToken ct)
+        {
+            if (provider is null)
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrEmpty(userName))
+            {
+                throw new ArgumentException($"'{nameof(userName)}' cannot be null or empty.", nameof(userName));
+            }
+
+            if (string.IsNullOrEmpty(password))
+            {
+                throw new ArgumentException($"'{nameof(password)}' cannot be null or empty.", nameof(password));
+            }
+
+            return await OpenSessionWrapper(async (cancellationToken) =>
+            {
+                var session =
+                    await InternalIdPAuthenticator.OpenSessionUserPasswordAsync(CreateContext(), userName, password, keepSignedIn,  cancellationToken);
+                return session;
+
+            }, ct);
+        }
+
+        public async Task<ApiSession> OpenSessionAsync(AdSeamlessIdP provider, bool keepSignedId, CancellationToken ct)
+        {
+            if (provider is null)
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            return await OpenSessionWrapper(async (cancellationToken) =>
+            {
+                var session =
+                    await AdSeamlessIdPAuthenticator.OpenSession(CreateContext(), provider.IdPId, keepSignedId, cancellationToken);
+                return session;
+
+            }, ct);
+        }
+
+        public Task<ApiSession> OpenAnonymousSessionAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ApiSession session = ApiSessionFactory.CreateAnonymousSession();
+            return Task.FromResult(session);
         }
     }
 

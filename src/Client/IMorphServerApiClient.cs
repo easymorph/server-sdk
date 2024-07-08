@@ -29,7 +29,13 @@ namespace Morph.Server.Sdk.Client
 
         Task<ServerStatus> GetServerStatusAsync(CancellationToken cancellationToken);
 
-        Task<ApiSession> OpenSessionAsync(OpenSessionRequest openSessionRequest, CancellationToken cancellationToken);
+        Task<ApiSession> OpenSessionAsync(SpacePwdIdP provider, string spaceName, string password, CancellationToken cancellationToken);
+        Task<ApiSession> OpenSessionAsync(InternalIdP provider, string userName, string password, bool keepSignedIn, CancellationToken cancellationToken);
+        Task<ApiSession> OpenSessionAsync(AdSeamlessIdP provider, bool keepKeepSignedIn, CancellationToken cancellationToken);
+        Task<ApiSession> OpenAnonymousSessionAsync(CancellationToken cancellationToken);
+
+
+        Task<ApiSession> OpenLegacySessionAsync(OpenLegacySessionRequest openSessionRequest, CancellationToken cancellationToken);
 
         /*COMPUTATIONS*/
         Task<ComputationDetailedItem> StartTaskAsync(ApiSession apiSession, 
