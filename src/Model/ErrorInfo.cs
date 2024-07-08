@@ -5,4 +5,5 @@ namespace Morph.Server.Sdk.Model
         public string Description { get; set; }
         public string Location { get; set; }
     }
+
 }

@@ -20,7 +20,7 @@ namespace Morph.Server.Sdk.Client
         Task CloseSessionAsync(ApiSession apiSession, CancellationToken cancellationToken);
     }
 
-    public interface IMorphServerApiClient : IHasConfig, IDisposable
+    public interface IMorphServerApiClient : IHasConfig, IDisposable, ICanCloseSession
     {
         HttpSecurityState HttpSecurityState { get; }
         event EventHandler<FileTransferProgressEventArgs> OnDataDownloadProgress;
@@ -34,6 +34,7 @@ namespace Morph.Server.Sdk.Client
         Task<ApiSession> OpenSessionAsync(AdSeamlessIdP provider, bool keepKeepSignedIn, CancellationToken cancellationToken);
         Task<ApiSession> OpenAnonymousSessionAsync(CancellationToken cancellationToken);
 
+        Task<AuthenticatedUser> GetCurrentAuthenticatedUserAsync(ApiSession apiSession, CancellationToken cancellationToken);
 
         Task<ApiSession> OpenLegacySessionAsync(OpenLegacySessionRequest openSessionRequest, CancellationToken cancellationToken);
 

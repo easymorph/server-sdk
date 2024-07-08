@@ -50,7 +50,14 @@ namespace Morph.Server.Sdk.Client
             return apiClient.PostAsync<NoContentRequest, NoContentResult>(url, null, null, apiSession.ToHeadersCollection(), cancellationToken);
         }
 
-    
+
+        public Task<ApiResult<AuthenticatedUserDto>> GetCurrentAuthenticatedUser(ApiSession apiSession, CancellationToken cancellationToken)
+        {
+            var url = "user/authenticated";
+            return apiClient.GetAsync<AuthenticatedUserDto>(url, null, apiSession.ToHeadersCollection(), cancellationToken);
+
+        }
+
 
         public Task<ApiResult<SpacesEnumerationDto>> SpacesGetListAsync(CancellationToken cancellationToken)
         {

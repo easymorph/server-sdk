@@ -688,6 +688,20 @@ namespace Morph.Server.Sdk.Client
         }
 
 
+        public async Task<AuthenticatedUser> GetCurrentAuthenticatedUserAsync(ApiSession apiSession, CancellationToken cancellationToken)
+        {
+            if (apiSession == null)
+            {
+                throw new ArgumentNullException(nameof(apiSession));
+            }
+
+            return await Wrapped(async (token) =>
+            {
+                var apiResult = await _lowLevelApiClient.GetCurrentAuthenticatedUser(apiSession, token);
+                return MapOrFail(apiResult, (dto) => AuthenticatedUserMaper.Map(dto));
+
+            }, cancellationToken, OperationType.ShortOperation);
+        }
 
         public Task<ApiSession> OpenSessionAsync(AnonymousIdP anonymousIdP, CancellationToken  cancellationToken)
         {

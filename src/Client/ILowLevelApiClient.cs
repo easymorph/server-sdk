@@ -46,7 +46,7 @@ namespace Morph.Server.Sdk.Client
         Task<ApiResult<NoContentResult>> AuthLogoutAsync(ApiSession apiSession, CancellationToken cancellationToken);
         Task<ApiResult<LoginResponseDto>> AuthLoginPasswordAsync(LoginRequestDto loginRequestDto, CancellationToken cancellationToken);
         Task<ApiResult<GenerateNonceResponseDto>> AuthGenerateNonce(CancellationToken cancellationToken);
-        
+        Task<ApiResult<AuthenticatedUserDto>> GetCurrentAuthenticatedUser(ApiSession apiSession, CancellationToken cancellationToken);
 
 
         // Server interaction
