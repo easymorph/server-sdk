@@ -10,5 +10,7 @@ namespace Morph.Server.Sdk.Dto
     [DataContract]
     internal class GenerateNonceRequestDto
     {
+        [DataMember]
+        public string UserName { get; set; }
     }
 }

@@ -3,19 +3,23 @@ using Morph.Server.Sdk.Helper;
 using Morph.Server.Sdk.Model;
 using Morph.Server.Sdk.Model.InternalModels;
 using System;
+using System.Collections.Specialized;
 using System.Net.Http;
+
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Morph.Server.Sdk.Client
 {
-    internal static class MorphServerAuthenticator
+
+
+    internal static class MorphServerLegacyAuthenticator
     {
 
-        public static async Task<ApiSession> OpenSessionMultiplexedAsync(
+        public static async Task<ApiSession> OpenLegacySessionMultiplexedAsync(
             SpaceEnumerationItem desiredSpace,
             OpenSessionAuthenticatorContext context,
-            OpenSessionRequest openSessionRequest,             
+            OpenLegacySessionRequest openSessionRequest,
             CancellationToken cancellationToken)
         {
             // space access restriction is supported since server 3.9.2
@@ -25,7 +29,7 @@ namespace Morph.Server.Sdk.Client
             {
                 // anon space
                 case SpaceAccessRestriction.None:
-                    return ApiSession.Anonymous(context.MorphServerApiClient, openSessionRequest.SpaceName);
+                    return ApiSessionFactory.CreateAnonymousSession();
 
                 // password protected space                
                 case SpaceAccessRestriction.BasicPassword:
@@ -41,7 +45,7 @@ namespace Morph.Server.Sdk.Client
                     //  if space is public or password is not set - open anon session
                     if (desiredSpace.IsPublic || string.IsNullOrWhiteSpace(openSessionRequest.Password))
                     {
-                        return ApiSession.Anonymous(context.MorphServerApiClient, openSessionRequest.SpaceName);
+                        return ApiSessionFactory.CreateAnonymousSession();
                     }
                     // otherwise open session via space password
                     else
@@ -76,13 +80,7 @@ namespace Morph.Server.Sdk.Client
                 var serverNonce = await internalGetAuthNonceAsync(ntmlRestApiClient, cancellationToken);
                 var token = await internalAuthExternalWindowAsync(ntmlRestApiClient, spaceName, serverNonce, cancellationToken);
 
-                return new ApiSession(context.MorphServerApiClient)
-                {
-                    AuthToken = token,
-                    IsAnonymous = false,
-                    IsClosed = false,
-                    SpaceName = spaceName
-                };
+                return ApiSessionFactory.CreateLegacySession(context.MorphServerApiClient, spaceName, token);
             }
         }
         static async Task<string> internalGetAuthNonceAsync(IRestClient apiClient, CancellationToken cancellationToken)
@@ -91,7 +89,7 @@ namespace Morph.Server.Sdk.Client
             var response = await apiClient.PostAsync<GenerateNonceRequestDto, GenerateNonceResponseDto>
                 (url, new GenerateNonceRequestDto(), null, new HeadersCollection(), cancellationToken);
             response.ThrowIfFailed();
-            return response.Data.Nonce;            
+            return response.Data.Nonce;
         }
 
         static async Task<string> internalAuthExternalWindowAsync(IRestClient apiClient, string spaceName, string serverNonce, CancellationToken cancellationToken)
@@ -106,7 +104,7 @@ namespace Morph.Server.Sdk.Client
             var apiResult = await apiClient.PostAsync<WindowsExternalLoginRequestDto, LoginResponseDto>(url, requestDto, null, new HeadersCollection(), cancellationToken);
             apiResult.ThrowIfFailed();
             return apiResult.Data.Token;
-            
+
         }
 
 
@@ -130,14 +128,14 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(password));
             }
 
-            var passwordSha256 = CryptographyHelper.CalculateSha256HEX(password);            
+            var passwordSha256 = CryptographyHelper.CalculateSha256HEX(password);
             var serverNonceApiResult = await context.LowLevelApiClient.AuthGenerateNonce(cancellationToken);
             serverNonceApiResult.ThrowIfFailed();
             var serverNonce = serverNonceApiResult.Data.Nonce;
             var clientNonce = ConvertHelper.ByteArrayToHexString(CryptographyHelper.GenerateRandomSequence(16));
             var all = passwordSha256 + serverNonce + clientNonce;
             var composedHash = CryptographyHelper.CalculateSha256HEX(all);
-            
+
 
             var requestDto = new LoginRequestDto
             {
@@ -149,16 +147,11 @@ namespace Morph.Server.Sdk.Client
             };
             var authApiResult = await context.LowLevelApiClient.AuthLoginPasswordAsync(requestDto, cancellationToken);
             authApiResult.ThrowIfFailed();
-            var token = authApiResult.Data.Token;           
-            
+            var token = authApiResult.Data.Token;
 
-            return new ApiSession(context.MorphServerApiClient)
-            {
-                AuthToken = token,
-                IsAnonymous = false,
-                IsClosed = false,
-                SpaceName = spaceName
-            };
+
+            return ApiSessionFactory.CreateLegacySession(context.MorphServerApiClient, spaceName, token);
+
         }
 
 
