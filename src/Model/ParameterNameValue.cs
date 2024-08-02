@@ -18,6 +18,7 @@ namespace Morph.Server.Sdk.Model
                 throw new ArgumentException("Parameter name is empty", nameof(name));
             }
 
+            Name = name;
             Value = value ?? string.Empty;
         }
     }

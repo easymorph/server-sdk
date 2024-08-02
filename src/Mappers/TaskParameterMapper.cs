@@ -23,25 +23,25 @@ namespace Morph.Server.Sdk.Mappers
             var parameterType = ParseParameterType(dto.ParameterType);
             switch (parameterType)
             {
-                case TaskParameterType.Text: 
+                case ParameterType.Text: 
                     return new TextParameter(dto.Name, dto.Value) { Note = dto.Note };
 
-                case TaskParameterType.Date:
+                case ParameterType.Date:
                     return new DateParameter(dto.Name, dto.Value) { Note = dto.Note };
 
-                case TaskParameterType.FilePath:
+                case ParameterType.FilePath:
                     return new FilePathParameter(dto.Name, dto.Value) { Note = dto.Note };
 
-                case TaskParameterType.FolderPath:
+                case ParameterType.FolderPath:
                     return new FolderPathParameter(dto.Name, dto.Value) { Note = dto.Note };
 
-                case TaskParameterType.Checkbox:
+                case ParameterType.Checkbox:
                     return new CheckboxParameter(dto.Name, dto.Value) { Note = dto.Note };
 
-                case TaskParameterType.FixedList:
+                case ParameterType.FixedList:
                     return new FixedListParameter(dto.Name, dto.Value, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
 
-                case TaskParameterType.MultipleChoice:
+                case ParameterType.MultipleChoice:
                     return new MultipleChoiceParameter(dto.Name, dto.Value, dto.Details?.SepatatorString, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
 
 
@@ -60,13 +60,13 @@ namespace Morph.Server.Sdk.Mappers
             return availableValues.Select(x => new MorphParameterValueListItem(x.Label, x.Value)).ToArray();
         }
 
-        private static TaskParameterType ParseParameterType(string value)
+        private static ParameterType ParseParameterType(string value)
         {
             //fallback to text
             if (string.IsNullOrWhiteSpace(value))
-                return TaskParameterType.Text;
+                return ParameterType.Text;
 
-            return (TaskParameterType)Enum.Parse(typeof(TaskParameterType), value, true);
+            return (ParameterType)Enum.Parse(typeof(ParameterType), value, true);
         }
 
         public static TaskParameterRequestDto ToDto(ParameterBase value)
