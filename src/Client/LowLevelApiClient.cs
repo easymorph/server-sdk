@@ -66,6 +66,13 @@ namespace Morph.Server.Sdk.Client
 
         }
 
+        public Task<ApiResult<SpacesEnumerationDto>> SpacesGetAccessibleListAsync(ApiSession apiSession, CancellationToken cancellationToken)
+        {
+            var url = "spaces/list/accessible";
+            return apiClient.GetAsync<SpacesEnumerationDto>(url, null, new HeadersCollection(), cancellationToken);
+
+        }
+
         public Task<ApiResult<SpacesLookupResponseDto>> SpacesLookupAsync(SpacesLookupRequestDto requestDto, CancellationToken cancellationToken)
         {
             var url = "spaces/list/lookup";

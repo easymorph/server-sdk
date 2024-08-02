@@ -29,6 +29,7 @@ namespace Morph.Server.Sdk.Client
 
         Task<ServerStatus> GetServerStatusAsync(CancellationToken cancellationToken);
 
+        Task<AuthProvidersList> GetAuthProvidersList(CancellationToken cancellationToken);
         Task<ApiSession> OpenSessionAsync(SpacePwdIdP provider, string spaceName, string password, CancellationToken cancellationToken);
         Task<ApiSession> OpenSessionAsync(InternalIdP provider, string userName, string password, bool keepSignedIn, CancellationToken cancellationToken);
         Task<ApiSession> OpenSessionAsync(AdSeamlessIdP provider, bool keepKeepSignedIn, CancellationToken cancellationToken);
@@ -68,6 +69,7 @@ namespace Morph.Server.Sdk.Client
             CancellationToken cancellationToken);
 
         Task<SpacesEnumerationList> GetSpacesListAsync(CancellationToken cancellationToken);
+        Task<SpacesEnumerationList> GetSpacesAccessibleListAsync(ApiSession apiSession, CancellationToken cancellationToken);
         Task<SpacesLookupResponse> SpacesLookupAsync(SpacesLookupRequest request, CancellationToken cancellationToken);
 
         Task<SpaceStatus> GetSpaceStatusAsync(ApiSession apiSession, string spaceName, CancellationToken cancellationToken);

@@ -435,6 +435,16 @@ namespace Morph.Server.Sdk.Client
             }, cancellationToken, OperationType.SessionOpenAndRelated);
         }
 
+        public async Task<SpacesEnumerationList> GetSpacesAccessibleListAsync(ApiSession apiSession, CancellationToken cancellationToken)
+        {
+            return await Wrapped(async (token) =>
+            {
+                var apiResult = await _lowLevelApiClient.SpacesGetAccessibleListAsync(apiSession, token);
+                return MapOrFail(apiResult, (dto) => SpacesEnumerationMapper.MapFromDto(dto));
+
+            }, cancellationToken, OperationType.SessionOpenAndRelated);
+        }
+
         public async Task<SpacesEnumerationList> GetSpacesListAsync(CancellationToken cancellationToken)
         {
             return await Wrapped(async (token) =>
@@ -1139,6 +1149,8 @@ namespace Morph.Server.Sdk.Client
             ApiSession session = ApiSessionFactory.CreateAnonymousSession();
             return Task.FromResult(session);
         }
+
+        
     }
 
 }

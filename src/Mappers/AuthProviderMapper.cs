@@ -52,22 +52,17 @@ namespace Morph.Server.Sdk.Mappers
     internal static class AuthProviderMapper
     {   
 
-        public static AuthProvider MapItem(AuthProviderDto dto)
+        public static IdentityProviderBase MapItem(AuthProviderDto dto)
         {
             if (dto is null)
             {
                 throw new ArgumentNullException(nameof(dto));
             }
 
-            return new AuthProvider
-            {
-               CanKeepLongSession = dto.CanKeepLongSession,
-               DisplayName = dto.DisplayName,               
-               IdentityProvider = Map(dto.IdPId, dto.IdPType)
-            };
+            return Map(dto.DisplayName, dto.IdPId, dto.IdPType, dto.CanKeepLongSession);            
         }
 
-        private static IdentityProviderBase Map(string idPId, string idPType)
+        private static IdentityProviderBase Map(string dispayName, string idPId, string idPType, bool canKeepLongSession)
         {
 
             if(IdPTypeMapper.TryParse(idPType, out var parsedIdPType))
@@ -75,25 +70,25 @@ namespace Morph.Server.Sdk.Mappers
                 switch (parsedIdPType)
                 {
                     case IdPType.Anonymous:
-                        return new AnonymousIdP(idPId);
+                        return new AnonymousIdP(dispayName, idPId);
                     case IdPType.SpacePwd:
-                        return new SpacePwdIdP(idPId);
+                        return new SpacePwdIdP(dispayName, idPId);
                     case IdPType.InternalIdP:
-                        return new InternalIdP(idPId);
+                        return new InternalIdP(dispayName, idPId, canKeepLongSession);
                     case IdPType.AdSeamlessIdP:
-                        return new AdSeamlessIdP(idPId);
+                        return new AdSeamlessIdP(dispayName, idPId, canKeepLongSession);
                     case IdPType.RescueLogin:
-                        return new RescueLoginIdP(idPId);
+                        return new RescueLoginIdP(dispayName, idPId);
                     case IdPType.OpenId:
-                        return new OpenIdP(idPId);
+                        return new OpenIdP(dispayName, idPId, canKeepLongSession);
                     default:
-                        return new UnknownIdP(idPId, idPType);
+                        return new UnknownIdP(dispayName, idPId, idPType);
 
                 }
             }
             else
             {
-                return new UnknownIdP(idPId, idPType);
+                return new UnknownIdP("<UNKNONW>", idPId, idPType);
             }
           
         }

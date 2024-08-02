@@ -56,6 +56,7 @@ namespace Morph.Server.Sdk.Client
         // spaces
 
         Task<ApiResult<SpacesEnumerationDto>> SpacesGetListAsync(CancellationToken cancellationToken);
+        Task<ApiResult<SpacesEnumerationDto>> SpacesGetAccessibleListAsync(ApiSession apiSession, CancellationToken cancellationToken);
         Task<ApiResult<SpacesLookupResponseDto>> SpacesLookupAsync(SpacesLookupRequestDto requestDto, CancellationToken cancellationToken);
         Task<ApiResult<SpaceStatusDto>> SpacesGetSpaceStatusAsync(ApiSession apiSession, string spaceName, CancellationToken cancellationToken);
 
