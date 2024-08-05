@@ -8,10 +8,10 @@
         public UnknownIdP(string displayName, string idPId, string idPType) :base(displayName, Model.IdPType.Unknown, idPId)
         {
 
-            IdPType = idPType ?? throw new System.ArgumentNullException(nameof(idPType));
+            IdPTypeRaw = idPType ?? throw new System.ArgumentNullException(nameof(idPType));
         }
 
-        public string IdPType { get; }
+        public string IdPTypeRaw { get; }
     }
 
 }

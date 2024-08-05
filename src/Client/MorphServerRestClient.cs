@@ -159,9 +159,9 @@ namespace Morph.Server.Sdk.Client
                        urlParameters,
                        headersCollection,
                        httpCompletionOption,
-                       cancellationToken))
+                       cancellationToken).ConfigureAwait(false))
             {
-                return await HandleResponse<TResult>(response);
+                return await HandleResponse<TResult>(response).ConfigureAwait(false);
             }
         }
 
@@ -178,7 +178,7 @@ namespace Morph.Server.Sdk.Client
             CancellationToken cancellationToken)
         {
 
-            var originalHttpContent = await httpContentFactory(cancellationToken);
+            var originalHttpContent = await httpContentFactory(cancellationToken).ConfigureAwait(false);
 
             // detect current http/https and upgrade if necessary
 
@@ -205,7 +205,7 @@ namespace Morph.Server.Sdk.Client
                     urlParameters,
                     headersCollection,
                     httpCompletionOption,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
             }
 
             var response = await _SendAsyncAsIs(httpMethod,
@@ -214,14 +214,14 @@ namespace Morph.Server.Sdk.Client
                 urlParameters,
                 headersCollection,
                 httpCompletionOption,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             try
             {
-                if (!await SessionRefresher.IsSessionLostResponse(headersCollection, path, originalHttpContent, response))
+                if (!await SessionRefresher.IsSessionLostResponse(headersCollection, path, originalHttpContent, response).ConfigureAwait(false))
                     return response;
 
-                if (!await SessionRefresher.RefreshSessionAsync(headersCollection, cancellationToken))
+                if (!await SessionRefresher.RefreshSessionAsync(headersCollection, cancellationToken).ConfigureAwait(false))
                     return response;
             }
             catch (Exception)
@@ -240,7 +240,7 @@ namespace Morph.Server.Sdk.Client
                 //We started with non-null http content, but likely it was disposed after the failed attempt.
                 //Try to re-create httpContent after session refresh to send request again.
 
-                recreatedHttpContent = await httpContentFactory(cancellationToken);
+                recreatedHttpContent = await httpContentFactory(cancellationToken).ConfigureAwait(false);
 
                 if (null == recreatedHttpContent)
                 {
@@ -258,7 +258,7 @@ namespace Morph.Server.Sdk.Client
                 urlParameters,
                 headersCollection,
                 httpCompletionOption,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         }
 
 
@@ -281,7 +281,7 @@ namespace Morph.Server.Sdk.Client
             {
                 HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage,
                     httpCompletionOption,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
                 return response;
             }
         }
@@ -329,7 +329,7 @@ namespace Morph.Server.Sdk.Client
 
                 try
                 {
-                    await Task.WhenAny(secureRequest, httpRequest);
+                    await Task.WhenAny(secureRequest, httpRequest).ConfigureAwait(false);
 
 
                     if (httpRequest.Status == TaskStatus.RanToCompletion || secureRequest.Status == TaskStatus.Faulted)
@@ -340,7 +340,7 @@ namespace Morph.Server.Sdk.Client
                     }
                     else if (secureRequest.Status == TaskStatus.RanToCompletion || httpRequest.Status == TaskStatus.Faulted)
                     {
-                        var secureResponse = await secureRequest;
+                        var secureResponse = await secureRequest.ConfigureAwait(false);
                         UpgradeToForcedHttps();
                         return secureResponse;
                     }
@@ -348,9 +348,9 @@ namespace Morph.Server.Sdk.Client
                     {
                         if (secureRequest.Status == TaskStatus.Canceled)
                         {
-                            return await secureRequest;
+                            return await secureRequest.ConfigureAwait(false);
                         }
-                        else return await httpRequest;
+                        else return await httpRequest.ConfigureAwait(false);
                     }
                     else
                     {
@@ -372,16 +372,20 @@ namespace Morph.Server.Sdk.Client
         {
             if (response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var result = jsonSerializer.Deserialize<TResult>(content);
                 return ApiResult<TResult>.Ok(result, response.Content.Headers);
             }
             else
             {
-                var error = await BuildExceptionFromResponse(response);
+               // response.RequestMessage.Properties
+                Exception error = await BuildExceptionFromResponse(response).ConfigureAwait(false);
+                //await ReportApiException(error, response).ConfigureAwait(false);
                 return ApiResult<TResult>.Fail(error, response.Content.Headers);
             }
         }
+
+      
 
         protected virtual HttpRequestMessage BuildHttpRequestMessage(HttpMethod httpMethod, Uri requestUri, HttpContent content, HeadersCollection headersCollection)
         {
@@ -403,7 +407,7 @@ namespace Morph.Server.Sdk.Client
         protected virtual async Task<Exception> BuildExceptionFromResponse(HttpResponseMessage response)
         {
 
-            var rawContent = await response.Content.ReadAsStringAsync();
+            var rawContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (!string.IsNullOrWhiteSpace(rawContent))
             {
                 ErrorResponse errorResponse = null;
@@ -470,7 +474,7 @@ namespace Morph.Server.Sdk.Client
             if (!headersCollection.Contains(ApiSession.AuthHeaderName))
                 return;
 
-            await SessionRefresher.EnsureSessionValid(this, headersCollection, cancellationToken);
+            await SessionRefresher.EnsureSessionValid(this, headersCollection, cancellationToken).ConfigureAwait(false);
         }
 
 
@@ -484,7 +488,7 @@ namespace Morph.Server.Sdk.Client
             HttpContentHeaders httpResponseHeaders = null;
             try
             {
-                await EnsureSessionValid(headersCollection, cancellationToken);
+                await EnsureSessionValid(headersCollection, cancellationToken).ConfigureAwait(false);
 
                 string boundary = "MorphRestClient--------" + Guid.NewGuid().ToString("N");
 
@@ -561,7 +565,7 @@ namespace Morph.Server.Sdk.Client
                     long totalProcessedBytes = 0;
 
                     // stream must be disposed by a caller
-                    Stream streamToReadFrom = await response.Content.ReadAsStreamAsync();
+                    Stream streamToReadFrom = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                     
                     var streamWithProgress = new StreamWithProgress(streamToReadFrom, contentLength, cancellationToken,
                         onReadProgress: e =>
@@ -598,7 +602,8 @@ namespace Morph.Server.Sdk.Client
                 {
                     try
                     {
-                        var error = await BuildExceptionFromResponse(response);
+                        var error = await BuildExceptionFromResponse(response).ConfigureAwait(false);
+                        //await ReportApiException(error, response).ConfigureAwait(false);
                         return ApiResult<FetchFileStreamData>.Fail(error, response.Content.Headers);
                     }
                     finally
@@ -664,7 +669,7 @@ namespace Morph.Server.Sdk.Client
         {
             HttpContentHeaders httpResponseHeaders = null;
 
-            await EnsureSessionValid(headersCollection, cancellationToken);
+            await EnsureSessionValid(headersCollection, cancellationToken).ConfigureAwait(false);
 
             string boundary = $"MorphRestClient-Streaming--------{Guid.NewGuid():N}";
 
@@ -704,7 +709,7 @@ namespace Morph.Server.Sdk.Client
                     {
                         try
                         {
-                            await pushFileStreamData.PushCallback(connection, pushCancellation.Token);
+                            await pushFileStreamData.PushCallback(connection, pushCancellation.Token).ConfigureAwait(false);
 
                             // Just return 'Ok', meaning that push sequence didnt result in error and actual response
                             // should be obtained from server in the logic below.
@@ -729,7 +734,7 @@ namespace Morph.Server.Sdk.Client
                                urlParameters,
                                headersCollection,
                                HttpCompletionOption.ResponseHeadersRead,
-                               cancellationToken))
+                               cancellationToken).ConfigureAwait(false))
                     {
                         var result = await HandleResponse<TResult>(response);
                         httpResponseHeaders = response.Content.Headers;

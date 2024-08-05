@@ -46,6 +46,9 @@ namespace Morph.Server.Sdk.Mappers
                     case SpaceAccessRestriction.BasicPassword:
                         yield return IdPType.SpacePwd;
                         break;
+                    //case SpaceAccessRestriction.WindowsAuthentication:
+                    //    yield return IdPType.AdSeamlessIdP;
+                    //    break;
                     default:
                         break;
 

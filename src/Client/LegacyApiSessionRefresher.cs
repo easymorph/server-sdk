@@ -58,7 +58,7 @@ namespace Morph.Server.Sdk.Client
                 return false;
 
             // this code should perform refresh sequence only for the legacy sessions.
-            var sessionObject = _sessions.FirstOrDefault(x => x.Key.AuthToken == expiredSessionToken).Key;
+            LegacyApiSession sessionObject = _sessions.FirstOrDefault(x => x.Key.AuthToken == expiredSessionToken).Key;
             // if no linked sessions found - skip refresh
             if (sessionObject == null) 
                 return false;
@@ -209,7 +209,8 @@ namespace Morph.Server.Sdk.Client
 
         private void PruneCache()
         {
-            var removeBefore = DateTime.UtcNow - TimeSpan.FromHours(5);
+            // max legacy session TTL is 48 hours
+            var removeBefore = DateTime.UtcNow - TimeSpan.FromHours(48);
 
             // Remove everything that was last touched 5 hours ago.
 

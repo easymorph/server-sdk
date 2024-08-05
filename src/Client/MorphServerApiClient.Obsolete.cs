@@ -24,7 +24,7 @@ namespace Morph.Server.Sdk.Client
             if (continiousStreamRequest == null)
                 throw new ArgumentNullException(nameof(continiousStreamRequest));
 
-            return Wrapped(async (token) =>
+            return WrappedWithSession(async (token) =>
             {
                 var apiResult =
                     continiousStreamRequest.OverwriteExistingFile
@@ -37,7 +37,7 @@ namespace Morph.Server.Sdk.Client
 
                 var connection = MapOrFail(apiResult, c => c);
                 return new ContiniousStreamingConnection(connection);
-            }, cancellationToken, OperationType.FileTransfer);
+            }, cancellationToken, OperationType.FileTransfer,apiSession);
         }
     }
 }
