@@ -4,6 +4,7 @@ using Morph.Server.Sdk.Model;
 using Morph.Server.Sdk.Model.InternalModels;
 using System;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Net.Http;
 
 using System.Threading;
@@ -22,39 +23,23 @@ namespace Morph.Server.Sdk.Client
             OpenLegacySessionRequest openSessionRequest,
             CancellationToken cancellationToken)
         {
-            // space access restriction is supported since server 3.9.2
-            // for previous versions api will return SpaceAccessRestriction.NotSupported 
-            // a special fall-back mechanize need to be used to open session in such case
-            switch (desiredSpace.SpaceAccessRestriction)
+            
+            if (desiredSpace.SpaceAuthenticationProviderTypes.Contains(IdPType.SpacePwd))
             {
-                // anon space
-                case SpaceAccessRestriction.None:
-                    return ApiSessionFactory.CreateAnonymousSession();
-
-                // password protected space                
-                case SpaceAccessRestriction.BasicPassword:
-                    return await OpenSessionViaSpacePasswordAsync(context, openSessionRequest.SpaceName, openSessionRequest.Password, cancellationToken);
-
-                // windows authentication
-                case SpaceAccessRestriction.WindowsAuthentication:
-                    return await OpenSessionViaWindowsAuthenticationAsync(context, openSessionRequest.SpaceName, cancellationToken);
-
-                // fallback
-                case SpaceAccessRestriction.NotSupported:
-
-                    //  if space is public or password is not set - open anon session
-                    if (desiredSpace.IsPublic || string.IsNullOrWhiteSpace(openSessionRequest.Password))
-                    {
-                        return ApiSessionFactory.CreateAnonymousSession();
-                    }
-                    // otherwise open session via space password
-                    else
-                    {
-                        return await OpenSessionViaSpacePasswordAsync(context, openSessionRequest.SpaceName, openSessionRequest.Password, cancellationToken);
-                    }
-
-                default:
-                    throw new Exception("Space access restriction method is not supported by this client.");
+                // password protected space                                
+                return await OpenSessionViaSpacePasswordAsync(context, openSessionRequest.SpaceName, openSessionRequest.Password, cancellationToken);
+            }
+            else if (desiredSpace.SpaceAuthenticationProviderTypes.Contains(IdPType.Anonymous))
+            {
+                return ApiSessionFactory.CreateAnonymousSession();
+            }
+            else if (desiredSpace.SpaceAuthenticationProviderTypes.Contains(IdPType.AdSeamlessIdP))
+            {
+                // windows authentication            
+                return await OpenSessionViaWindowsAuthenticationAsync(context, openSessionRequest.SpaceName, cancellationToken);                 
+            }
+            else {                
+               throw new Exception("Space access authentification method is not supported by this client.");
             }
         }
 

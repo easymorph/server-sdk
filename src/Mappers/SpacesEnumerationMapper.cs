@@ -19,14 +19,13 @@ namespace Morph.Server.Sdk.Mappers
 
        
         public static SpaceEnumerationItem MapItemFromDto(SpaceEnumerationItemDto dto)
-        {
-            var spaceAccessRestriction = ParseSpaceAccessRestriction(dto.SpaceAccessRestriction);
+        {   
             return new SpaceEnumerationItem
             {
                 IsPublic = dto.IsPublic,
-                SpaceName = dto.SpaceName,
-                SpaceAccessRestriction = spaceAccessRestriction,
-                SpaceAuthenticationProviderTypes = FillProviders(spaceAccessRestriction, dto.AuthenticationProviders).ToArray()
+                SpaceName = dto.SpaceName,                
+                SpaceAuthenticationProviderTypes = FillProviders(
+                    ParseSpaceAccessRestriction(dto.SpaceAccessRestriction), dto.AuthenticationProviders).ToArray()
             };
         }
 
@@ -46,9 +45,9 @@ namespace Morph.Server.Sdk.Mappers
                     case SpaceAccessRestriction.BasicPassword:
                         yield return IdPType.SpacePwd;
                         break;
-                    //case SpaceAccessRestriction.WindowsAuthentication:
-                    //    yield return IdPType.AdSeamlessIdP;
-                    //    break;
+                    case SpaceAccessRestriction.WindowsAuthentication:
+                        yield return IdPType.AdSeamlessIdP;
+                        break;
                     default:
                         break;
 
