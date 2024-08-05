@@ -5,6 +5,7 @@ namespace Morph.Server.Sdk.Model
 {
     public static class ApiSessionSerializationFactory
     {
+
         public static string Serialize(ApiSession apiSession)
         {
             if (apiSession is null)

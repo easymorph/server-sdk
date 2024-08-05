@@ -31,7 +31,7 @@ namespace Morph.Server.Sdk.Client
     {
         protected readonly IJsonSerializer jsonSerializer;
 
-        private IApiSessionRefresher SessionRefresher { get; }
+        private ILegacyApiSessionRefresher SessionRefresher { get; }
 
         private static string HttpsSchemeConstant = "https";
         private static string HttpStateDetectionEndpoint = "server/status";
@@ -46,7 +46,7 @@ namespace Morph.Server.Sdk.Client
         public HttpSecurityState HttpSecurityState { get; protected set; } = HttpSecurityState.NotEvaluated;
 
         public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, IJsonSerializer jsonSerializer,
-            IApiSessionRefresher sessionRefresher,
+            ILegacyApiSessionRefresher sessionRefresher,
             HttpSecurityState httpSecurityState = HttpSecurityState.NotEvaluated)
         {
             this.jsonSerializer = jsonSerializer ?? throw new ArgumentNullException(nameof(jsonSerializer));
@@ -62,7 +62,7 @@ namespace Morph.Server.Sdk.Client
             }
         }
 
-        public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, IApiSessionRefresher sessionRefresher,
+        public MorphServerRestClient(HttpClient httpClient, Uri baseAddress, ILegacyApiSessionRefresher sessionRefresher,
             HttpSecurityState httpSecurityState = HttpSecurityState.NotEvaluated) :
             this(httpClient, baseAddress, new MorphDataContractJsonSerializer(),sessionRefresher,  httpSecurityState)
         {

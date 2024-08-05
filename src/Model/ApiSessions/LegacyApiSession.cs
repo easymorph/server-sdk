@@ -23,8 +23,8 @@ namespace Morph.Server.Sdk.Model
         /// Api session constructor
         /// </summary>
         /// <param name="client">reference to client </param>
-        internal LegacyApiSession(ICanCloseSession client,string spaceName,  string authToken): 
-            base(authToken?? throw new ArgumentException("AuthToken must be set"))
+        internal LegacyApiSession(ICanCloseSession client, string spaceName, string authToken) :
+            base(authToken ?? throw new ArgumentException("AuthToken must be set"))
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             IsClosed = false;
@@ -38,10 +38,20 @@ namespace Morph.Server.Sdk.Model
                 _spaceName = this._spaceName.ToLowerInvariant().Trim();
             };
 
-    }
+        }
 
 
+        /// <summary>
+        ///     Import authentication data from other token
+        /// </summary>
+        /// <param name="freshSession">Session to import from</param>
+        /// <exception cref="ArgumentNullException"><see cref="freshSession"/> is null</exception>
+        public void FillFrom(ApiSession freshSession)
+        {
+            if (freshSession == null) throw new ArgumentNullException(nameof(freshSession));
 
+            AuthToken = freshSession.AuthToken;
+        }
 
 
         public async Task CloseSessionAsync(CancellationToken cancellationToken)
@@ -92,7 +102,7 @@ namespace Morph.Server.Sdk.Model
         public override void Dispose()
         {
             try
-            {   
+            {
 
                 if (_lock != null)
                 {

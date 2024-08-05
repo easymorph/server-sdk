@@ -15,7 +15,7 @@ namespace Morph.Server.Sdk.Client
     /// <summary>
     /// Service that provides seamless API token refresh
     /// </summary>
-    public interface IApiSessionRefresher
+    public interface ILegacyApiSessionRefresher
     {
         /// <summary>
         /// Re-authenticates current session (if any) and seamlessly updates existing <see cref="ApiSession"/> instances that were associated
@@ -28,11 +28,11 @@ namespace Morph.Server.Sdk.Client
 
         /// <summary>
         /// Save <see cref="authenticator"/> for <see cref="session"/>. T
-        /// his is required for <see cref="ApiSession"/> object tracking and for <see cref="RefreshSessionAsync"/> to work.
+        /// his is required for <see cref="LegacyApiSession"/> object tracking and for <see cref="RefreshSessionAsync"/> to work.
         /// </summary>
         /// <param name="session"></param>
         /// <param name="authenticator"></param>
-        void AssociateAuthenticator(ApiSession session, Authenticator authenticator);
+        void AssociateAuthenticator(LegacyApiSession session, Authenticator authenticator);
 
         /// <summary>
         /// Returns true if <see cref="response"/> indicates that the session has expired

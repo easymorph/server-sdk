@@ -96,7 +96,7 @@ namespace Morph.Server.Sdk.Client
             }
 
             return new MorphServerRestClient(httpClient, baseAddress,
-                clientConfiguration.SessionRefresher,
+                clientConfiguration.LegacySessionRefresher,
                 clientConfiguration.HttpSecurityState);
         }
 
@@ -823,15 +823,17 @@ namespace Morph.Server.Sdk.Client
 
             return async ctoken =>
             {
-                var response = await MorphServerLegacyAuthenticator.OpenLegacySessionMultiplexedAsync(desiredSpace,
+                var session = await MorphServerLegacyAuthenticator.OpenLegacySessionMultiplexedAsync(desiredSpace,
                     CreateContext(),
                     requestClone,
                     ctoken);
 
-                if(!string.IsNullOrWhiteSpace(response?.AuthToken))
-                    Config.SessionRefresher.AssociateAuthenticator(response, CreateAuthenticator(requestClone, desiredSpace));
+                if (session != null && session is LegacyApiSession legacyApiSession)
+                {
+                    Config.LegacySessionRefresher.AssociateAuthenticator(legacyApiSession, CreateAuthenticator(requestClone, desiredSpace));
+                }
 
-                return response;
+                return session;
             };
         }
 

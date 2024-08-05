@@ -29,17 +29,6 @@ namespace Morph.Server.Sdk.Model
 
         public abstract void Dispose();
 
-        /// <summary>
-        ///     Import authentication data from other token
-        /// </summary>
-        /// <param name="freshSession">Session to import from</param>
-        /// <exception cref="ArgumentNullException"><see cref="freshSession"/> is null</exception>
-        public void FillFrom(ApiSession freshSession)
-        {
-            if (freshSession == null) throw new ArgumentNullException(nameof(freshSession));
-
-            AuthToken = freshSession.AuthToken;
-        }
     }
 
 
