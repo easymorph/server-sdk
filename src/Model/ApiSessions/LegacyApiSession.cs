@@ -35,7 +35,7 @@ namespace Morph.Server.Sdk.Model
             }
             else
             {
-                _spaceName = this._spaceName.ToLowerInvariant().Trim();
+                _spaceName = spaceName.ToLowerInvariant().Trim();
             };
 
         }
