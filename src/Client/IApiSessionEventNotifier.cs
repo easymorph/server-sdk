@@ -5,7 +5,7 @@ namespace Morph.Server.Sdk.Client
 {
     public interface IApiSessionEventNotifier
     {
-        Func<ApiSessionUnauthenticatedEventData,Task> OnSessionUnathenticated { get; set; }
+        Func<ApiSessionUnauthenticatedEventData,Task> OnSessionUnauthenticated { get; set; }
         Task InvokeOnApiSessionUnauthenticated(ApiSessionUnauthenticatedEventData eventData);
     }
 }

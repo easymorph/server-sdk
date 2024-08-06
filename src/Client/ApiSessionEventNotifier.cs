@@ -5,7 +5,7 @@ namespace Morph.Server.Sdk.Client
 {
     public class ApiSessionEventNotifier : IApiSessionEventNotifier
     {
-        public Func<ApiSessionUnauthenticatedEventData, Task> OnSessionUnathenticated { get; set; }
+        public Func<ApiSessionUnauthenticatedEventData, Task> OnSessionUnauthenticated { get; set; }
         public async Task InvokeOnApiSessionUnauthenticated(ApiSessionUnauthenticatedEventData eventData)
         {
             if (eventData is null)
@@ -15,9 +15,9 @@ namespace Morph.Server.Sdk.Client
 
             try
             {
-                if (OnSessionUnathenticated != null)
+                if (OnSessionUnauthenticated != null)
                 {
-                    await OnSessionUnathenticated(eventData).ConfigureAwait(false);
+                    await OnSessionUnauthenticated(eventData).ConfigureAwait(false);
                 }
             }
             catch(Exception){
