@@ -12,7 +12,7 @@ namespace Morph.Server.Sdk.Client
     internal static class SpacePwdAuthenticator
     {
 
-        public static async Task<ApiSession> OpenSessionViaSpacePasswordAsync(OpenSessionAuthenticatorContext context, string spaceName, string password, CancellationToken cancellationToken)
+        public static async Task<LegacyApiSession> OpenSessionViaSpacePasswordAsync(OpenSessionAuthenticatorContext context, string spaceName, string password, CancellationToken cancellationToken)
         {
             if (context is null)
             {

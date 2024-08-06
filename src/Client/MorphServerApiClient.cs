@@ -1148,8 +1148,21 @@ namespace Morph.Server.Sdk.Client
 
             return await OpenSessionWrapper(async (cancellationToken) =>
             {
-                var session =
+                LegacyApiSession session =
                     await SpacePwdAuthenticator.OpenSessionViaSpacePasswordAsync(CreateContext(), spaceName, password, cancellationToken);
+                var emulatedSpaceEnumerationItem = new SpaceEnumerationItem
+                {
+                    IsPublic = false,
+                    SpaceAuthenticationProviderTypes = new[] { IdPType.SpacePwd },
+                    SpaceName = spaceName
+                };
+                var emulatedRequest = new OpenLegacySessionRequest
+                {
+                    Password = password,
+                    SpaceName = spaceName
+                };
+                // reguired for session reopen
+                Config.LegacySessionRefresher.AssociateAuthenticator(session, CreateAuthenticator(emulatedRequest, emulatedSpaceEnumerationItem));
                 return session;
 
             }, ct);
