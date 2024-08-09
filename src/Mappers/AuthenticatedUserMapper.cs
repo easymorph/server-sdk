@@ -18,14 +18,59 @@ namespace Morph.Server.Sdk.Mappers
             {
                 throw new ArgumentNullException(nameof(authenticatedUserDto));
             }
-            return new AuthenticatedUser
+            if (authenticatedUserDto.RealUser != null)
             {
-                DisplayName = authenticatedUserDto.DisplayName,
-                Email = authenticatedUserDto.Email,
-                ExternalIdentity = authenticatedUserDto.ExternalIdentity,
-                FullName = authenticatedUserDto.FullName,
-                UserId = authenticatedUserDto.UserId,
-                UserName = authenticatedUserDto.UserName
+                return MapRealUser(authenticatedUserDto.RealUser);
+            }
+            else if (authenticatedUserDto.LegacyUser != null)
+            {
+                return MapLeagacyUser(authenticatedUserDto.LegacyUser);
+            }
+            else if (authenticatedUserDto.Anonymous != null)
+            {
+                return MapAnonymous(authenticatedUserDto.Anonymous);
+            }
+            else throw new NotSupportedException("AuthenticatedUser identity not supported");
+
+            
+        }
+
+        private static AuthenticatedUser MapAnonymous(AnonymousAuthenticatedUserDto anonymous)
+        {
+            return new AnonumousAuthenticatedUser
+            {
+                AnonymousDueWrongSession = anonymous.AnonymousDueWrongSession
+            };
+        }
+
+        private static AuthenticatedUser MapLeagacyUser(LegacyAuthenticatedUserDto legacyUser)
+        {
+            if (legacyUser is null)
+            {
+                throw new ArgumentNullException(nameof(legacyUser));
+            }
+
+            return new LegacyAuthenticatedUser
+            {
+                SpaceName = legacyUser.SpaceName
+            };
+        }
+
+        private static AuthenticatedUser MapRealUser(RealAuthenticatedUserDto dto)
+        {
+            if (dto is null)
+            {
+                throw new ArgumentNullException(nameof(dto));
+            }
+
+            return new RealAuthenticatedUser
+            {
+                DisplayName = dto.DisplayName,
+                Email = dto.Email,
+                ExternalIdentity = dto.ExternalIdentity,
+                FullName = dto.FullName,
+                UserId = dto.UserId,
+                UserName = dto.UserName
 
             };
         }

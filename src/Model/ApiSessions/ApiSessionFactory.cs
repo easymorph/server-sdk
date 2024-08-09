@@ -9,7 +9,9 @@ namespace Morph.Server.Sdk.Model
     {
         public static AnonymousSession CreateAnonymousSession()
         {
-            return new AnonymousSession()
+            Guid localIdentifier = Guid.NewGuid();
+
+            return new AnonymousSession(localIdentifier)
             {
 
             };
@@ -23,9 +25,25 @@ namespace Morph.Server.Sdk.Model
                 throw new System.ArgumentException($"'{nameof(authToken)}' cannot be null or whitespace.", nameof(authToken));
             }
 
-            return new LegacyApiSession(canCloseSession, spaceName, authToken);
+            Guid localIdentifier = Guid.NewGuid();
+
+            var legacySession = new LegacyApiSession(localIdentifier, spaceName, authToken);
+            if (canCloseSession != null)
+            {
+                legacySession.SetClient(canCloseSession);
+            }
+            return legacySession;
         }
 
+        public static PersitableApiSession RestorePersitableApiSession(Guid localIdentifier, string authToken)
+        {
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                throw new System.ArgumentException($"'{nameof(authToken)}' cannot be null or whitespace.", nameof(authToken));
+            }
+
+            return new PersitableApiSession(localIdentifier , authToken);
+        }
         public static PersitableApiSession CreatePersitableApiSession(string authToken)
         {
             if (string.IsNullOrWhiteSpace(authToken))
@@ -33,7 +51,9 @@ namespace Morph.Server.Sdk.Model
                 throw new System.ArgumentException($"'{nameof(authToken)}' cannot be null or whitespace.", nameof(authToken));
             }
 
-            return new PersitableApiSession(authToken);
+            Guid localIdentifier = Guid.NewGuid();
+
+            return new PersitableApiSession(localIdentifier, authToken);
         }
     }
 

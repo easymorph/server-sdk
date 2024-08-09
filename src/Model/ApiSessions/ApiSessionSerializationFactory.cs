@@ -21,6 +21,7 @@ namespace Morph.Server.Sdk.Model
                                 new XAttribute("Version", 1),
                                 new XAttribute("Type", "PersitableApiSession"),
                                 new XElement("AuthToken", persitableApiSession.AuthToken),
+                                new XElement("LocalIdentifier", persitableApiSession.LocalIdentifier.ToString("N")),
                                 new XElement("HeaderName", PersitableApiSession.AuthHeaderName)
                                 ));
                     return xdoc.ToString();
@@ -64,7 +65,8 @@ namespace Morph.Server.Sdk.Model
             {
                 case "PersitableApiSession":
                     var token = xApiSession.Element("AuthToken")?.Value ?? throw new Exception("Persisable api session is empty");
-                    return ApiSessionFactory.CreatePersitableApiSession(token);
+                    var localIdentifier = Guid.ParseExact(xApiSession.Element("LocalIdentifier")?.Value ?? throw new Exception("LocalIdentifier for api session is empty"), "N");
+                    return ApiSessionFactory.RestorePersitableApiSession(localIdentifier, token);
                 default:
                     throw new Exception("Not supported persisted api session type");
             };

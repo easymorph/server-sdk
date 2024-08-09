@@ -1,7 +1,24 @@
 namespace Morph.Server.Sdk.Model
 {
 
-    public class AuthenticatedUser
+    public abstract class AuthenticatedUser
+    {
+    
+    }
+
+    public sealed class AnonumousAuthenticatedUser : AuthenticatedUser
+    {
+        public string AnonymousDueWrongSession { get; set; }
+        
+    }
+
+    public sealed class LegacyAuthenticatedUser : AuthenticatedUser
+    {
+        public string SpaceName{ get; set; }
+    }
+
+
+    public sealed class RealAuthenticatedUser : AuthenticatedUser
     {
 
         /// <summary>

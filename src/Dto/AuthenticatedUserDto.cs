@@ -2,8 +2,56 @@
 
 namespace Morph.Server.Sdk.Dto
 {
+
+    
+
+
+
     [DataContract]
     internal class AuthenticatedUserDto
+    {
+
+        [DataMember(Name = "realUser")] 
+        public RealAuthenticatedUserDto RealUser { get; set; } 
+        [DataMember(Name = "legacyUser")] 
+        public LegacyAuthenticatedUserDto LegacyUser { get; set; } 
+        [DataMember(Name = "anonymous")]         
+        public AnonymousAuthenticatedUserDto Anonymous { get; set; } 
+
+
+    }
+
+
+
+    [DataContract]
+    internal class AnonymousAuthenticatedUserDto
+    {
+
+        
+        [DataMember(Name = "anonymousDueWrongSession")]
+        public string AnonymousDueWrongSession { get; set; }
+
+
+
+    }
+
+
+    [DataContract]
+    internal class LegacyAuthenticatedUserDto
+    {
+
+        /// <summary>
+        /// spaceName
+        /// </summary>
+        [DataMember(Name = "spaceName")]
+        public string SpaceName { get; set; }
+
+
+
+    }
+
+    [DataContract]
+    internal class RealAuthenticatedUserDto
     {
 
         /// <summary>

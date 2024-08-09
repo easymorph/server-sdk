@@ -12,7 +12,11 @@ namespace Morph.Server.Sdk.Model
         public bool IsClosed { get; internal set; }
 
 
-        ICanCloseSession _client;
+
+        /// <summary>
+        /// Optional client that allows the session on session object dispose
+        /// </summary>
+        ICanCloseSession _optionalClient;
         private string _spaceName;
 
         private SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
@@ -23,10 +27,10 @@ namespace Morph.Server.Sdk.Model
         /// Api session constructor
         /// </summary>
         /// <param name="client">reference to client </param>
-        internal LegacyApiSession(ICanCloseSession client, string spaceName, string authToken) :
-            base(authToken ?? throw new ArgumentException("AuthToken must be set"))
+        internal LegacyApiSession(Guid  localIdentifier, string spaceName, string authToken) :
+            base(localIdentifier, authToken ?? throw new ArgumentException("AuthToken must be set"))
         {
-            _client = client ?? throw new ArgumentNullException(nameof(client));
+            
             IsClosed = false;
 
             if (string.IsNullOrEmpty(spaceName))
@@ -40,6 +44,15 @@ namespace Morph.Server.Sdk.Model
 
         }
 
+        /// <summary>
+        /// Sets optional client that allows session close
+        /// </summary>
+        /// <param name="optionalClient"></param>
+        public virtual void SetClient(ICanCloseSession optionalClient)
+        {
+            _optionalClient = optionalClient;
+        }
+
 
         /// <summary>
         ///     Import authentication data from other token
@@ -51,6 +64,7 @@ namespace Morph.Server.Sdk.Model
             if (freshSession == null) throw new ArgumentNullException(nameof(freshSession));
 
             AuthToken = freshSession.AuthToken;
+            LocalIdentifier = freshSession.LocalIdentifier;
         }
 
 
@@ -71,7 +85,7 @@ namespace Morph.Server.Sdk.Model
         private async Task _InternalCloseSessionAsync(CancellationToken cancellationToken)
         {
             // don't close if session is already closed or anon.            
-            if (IsClosed || _client == null || IsAnonymous)
+            if (IsClosed || _optionalClient == null || IsAnonymous)
             {
                 return;
             }
@@ -81,15 +95,14 @@ namespace Morph.Server.Sdk.Model
                 using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
                 {
                     linkedCts.CancelAfter(TimeSpan.FromSeconds(5));
-                    await _client.CloseSessionAsync(this, linkedCts.Token);
+                    await _optionalClient.CloseSessionAsync(this, linkedCts.Token);
 
                     // don't dispose client implicitly, just remove link to client
-                    if (_client.Config.AutoDisposeClientOnSessionClose)
+                    if (_optionalClient.Config.AutoDisposeClientOnSessionClose)
                     {
-                        _client.Dispose();
+                        _optionalClient.Dispose();
                     }
-                    _client = null;
-
+                    _optionalClient = null;
                     IsClosed = true;
                 }
             }
@@ -109,7 +122,7 @@ namespace Morph.Server.Sdk.Model
                     _lock.Wait(5000);
                     try
                     {
-                        if (!IsClosed && _client != null)
+                        if (!IsClosed && _optionalClient != null)
                         {
                             Task.Run(async () =>
                             {

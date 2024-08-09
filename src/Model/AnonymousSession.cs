@@ -1,8 +1,10 @@
-﻿namespace Morph.Server.Sdk.Model
+﻿using System;
+
+namespace Morph.Server.Sdk.Model
 {
     public sealed class AnonymousSession : ApiSession
     {
-        internal AnonymousSession() : base(null)
+        internal AnonymousSession(Guid localIdentifier) : base(localIdentifier, null)
         {
          
         }

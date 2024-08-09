@@ -1,11 +1,15 @@
-﻿namespace Morph.Server.Sdk.Model
+﻿using System;
+
+namespace Morph.Server.Sdk.Model
 {
+
     /// <summary>
     /// PersistableApiSession might be stored locally and reused
     /// </summary>
-    public class PersitableApiSession : ApiSession
+    /// 
+    public class PersitableApiSession : ApiSession, ISerializableApiSession
     {
-        internal PersitableApiSession(string authToken) : base(authToken)
+        internal PersitableApiSession(Guid localIdentifier, string authToken) : base(localIdentifier, authToken)
         {
         }
 
@@ -14,7 +18,6 @@
             // nothing to do
         }
 
-        // TODO: serialization/deserialization
     }
 
 
