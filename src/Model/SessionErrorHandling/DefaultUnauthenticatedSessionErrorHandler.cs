@@ -21,32 +21,58 @@ namespace Morph.Server.Sdk.Model.SessionErrorHandling
 
         public IEnumerable<ISessionErrorHandlingStrategy> Strategies { get; }
 
+
+        HashSet<Guid> processingSessions = new HashSet<Guid>();
+        object _lock = new object();
         public async Task<TResult> HandleAsync<TResult>(SessionErrorContext context, Func<ApiSession, Task<TResult>> retry, CancellationToken orginalCancellationToken)
         {
-            if (context.OccuredException is MorphApiUnauthorizedException)
+            try
             {
-                foreach (var strategy in Strategies)
+                
+                if (context.OccuredException is MorphApiUnauthorizedException)
                 {
-                    try
-                    {
-                        var result = await strategy.InvokeStrategyAsync(context, orginalCancellationToken);
-                        switch (result)
-                        {
-                            case NotApplicable notApplicable:
-                                continue;
-                            case RenewedSession renewedSession:
-                                return await retry(renewedSession.NewApiSession);
 
+                    // try to prevent infinite loop
+                    lock (_lock)
+                    {
+                        if (processingSessions.Contains(context.ApiSession.LocalIdentifier))
+                        {
+                            throw context.OccuredException;
+                        }
+                        processingSessions.Add(context.ApiSession.LocalIdentifier);
+                    }
+
+
+
+                    foreach (var strategy in Strategies)
+                    {
+                        try
+                        {
+                            var result = await strategy.InvokeStrategyAsync(context, orginalCancellationToken);
+                            switch (result)
+                            {
+                                case NotApplicable notApplicable:
+                                    continue;
+                                case RenewedSession renewedSession:
+                                    return await retry(renewedSession.NewApiSession);
+
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // nothing
                         }
                     }
-                    catch (Exception)
-                    {
-                        // nothing
-                    }
                 }
+
+                throw context.OccuredException;
+            }
+            finally
+            {
+                processingSessions.Remove(context.ApiSession.LocalIdentifier);
+
             }
 
-            throw context.OccuredException;
         }
     }
 
