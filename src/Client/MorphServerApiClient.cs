@@ -1226,7 +1226,7 @@ namespace Morph.Server.Sdk.Client
             }
         }
 
-        public async Task<ApiSession> OpenSessionAsync(InternalIdP provider, string userName, string password, bool keepSignedIn, CancellationToken ct)
+        public async Task<ApiSession> OpenSessionAsync(InternalIdP provider, string userName, string password, CancellationToken ct)
         {
             if (provider is null)
             {
@@ -1246,7 +1246,7 @@ namespace Morph.Server.Sdk.Client
             return await OpenSessionWrapper(async (cancellationToken) =>
             {
                 var session =
-                    await InternalIdPAuthenticator.OpenSessionUserPasswordAsync(CreateContext(), userName, password, keepSignedIn,  cancellationToken);
+                    await InternalIdPAuthenticator.OpenSessionUserPasswordAsync(CreateContext(), userName, password, keepSignedIn:true,  cancellationToken);
                 return session;
 
             }, ct);
