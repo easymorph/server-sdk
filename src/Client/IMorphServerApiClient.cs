@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Morph.Server.Sdk.Events;
 using Morph.Server.Sdk.Model;
 using Morph.Server.Sdk.Model.Commands;
+using Morph.Server.Sdk.Model.SessionErrorHandling;
 using Morph.Server.Sdk.Model.SharedMemory;
 
 namespace Morph.Server.Sdk.Client
@@ -25,7 +26,7 @@ namespace Morph.Server.Sdk.Client
         HttpSecurityState HttpSecurityState { get; }
         event EventHandler<FileTransferProgressEventArgs> OnDataDownloadProgress;
         event EventHandler<FileTransferProgressEventArgs> OnDataUploadProgress;
-
+        ISessionErrorHander SessionErrorHander { get; set; }
 
         Task<ServerStatus> GetServerStatusAsync(CancellationToken cancellationToken);
 

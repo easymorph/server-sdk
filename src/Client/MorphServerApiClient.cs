@@ -17,9 +17,13 @@ using Morph.Server.Sdk.Dto;
 using System.Collections.Concurrent;
 using Morph.Server.Sdk.Exceptions;
 using Morph.Server.Sdk.Model.SharedMemory;
+using Morph.Server.Sdk.Model.SessionErrorHandling;
 
 namespace Morph.Server.Sdk.Client
 {
+
+
+
     public partial class MorphServerApiClient : IMorphServerApiClient, IDisposable, ICanCloseSession
     {
 
@@ -35,6 +39,8 @@ namespace Morph.Server.Sdk.Client
 
         private bool _disposed = false;
         private object _lock = new object();
+
+        public virtual ISessionErrorHander SessionErrorHander { get; set; } = null;
 
 
         public IClientConfiguration Config => clientConfiguration;
@@ -162,7 +168,7 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(startTaskRequest));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session,token) =>
             {
                 var requestDto = new TaskStartRequestDto()
                 {
@@ -170,7 +176,7 @@ namespace Morph.Server.Sdk.Client
                     TaskParameters = startTaskRequest.TaskParameters?.Select(TaskParameterMapper.ToDto)?.ToList()
                 };
 
-                var apiResult = await _lowLevelApiClient.StartTaskAsync(apiSession, spaceName, requestDto, token);
+                var apiResult = await _lowLevelApiClient.StartTaskAsync(session, spaceName, requestDto, token);
                 return MapOrFail(apiResult, ComputationDetailedItemMapper.FromDto);
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -184,9 +190,9 @@ namespace Morph.Server.Sdk.Client
             }
 
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session,token) =>
             {
-                var apiResult = await _lowLevelApiClient.GetComputationDetailsAsync(apiSession, spaceName, computationId, token);
+                var apiResult = await _lowLevelApiClient.GetComputationDetailsAsync(session, spaceName, computationId, token);
                 return MapOrFail(apiResult, ComputationDetailedItemMapper.FromDto);
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -200,9 +206,9 @@ namespace Morph.Server.Sdk.Client
             }
 
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                await _lowLevelApiClient.CancelComputationAsync(apiSession, spaceName, computationId, token);
+                await _lowLevelApiClient.CancelComputationAsync(session, spaceName, computationId, token);
                 return Task.FromResult(0);
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -216,9 +222,9 @@ namespace Morph.Server.Sdk.Client
             }
 
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.GetWorkflowResultDetailsAsync(apiSession, spaceName, resultToken, token);
+                var apiResult = await _lowLevelApiClient.GetWorkflowResultDetailsAsync(session, spaceName, resultToken, token);
                 return MapOrFail(apiResult, WorkflowResultDetailsMapper.FromDto);
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -226,15 +232,15 @@ namespace Morph.Server.Sdk.Client
 
         public Task AcknowledgeWorkflowResultAsync(ApiSession apiSession, string spaceName, string resultToken, CancellationToken cancellationToken)
         {
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                await _lowLevelApiClient.AcknowledgeWorkflowResultAsync(apiSession, spaceName, resultToken, token);
+                await _lowLevelApiClient.AcknowledgeWorkflowResultAsync(session, spaceName, resultToken, token);
                 return Task.FromResult(0);
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
         }
 
-        protected virtual async Task<TResult> WrappedWithSession<TResult>(Func<CancellationToken, Task<TResult>> fun, CancellationToken orginalCancellationToken, OperationType operationType, ApiSession apiSession)
+        protected virtual async Task<TResult> WrappedWithSession<TResult>(Func<ApiSession, CancellationToken, Task<TResult>> fun, CancellationToken orginalCancellationToken, OperationType operationType, ApiSession apiSession)
         {
             if (apiSession is null)
             {
@@ -246,51 +252,10 @@ namespace Morph.Server.Sdk.Client
                 throw new ObjectDisposedException(nameof(MorphServerApiClient));
             }
 
-
-            TimeSpan maxExecutionTime;
-            switch (operationType)
-            {
-                case OperationType.FileTransfer:
-                    maxExecutionTime = clientConfiguration.FileTransferTimeout; break;
-                case OperationType.ShortOperation:
-                    maxExecutionTime = clientConfiguration.OperationTimeout; break;
-                case OperationType.SessionOpenAndRelated:
-                    maxExecutionTime = clientConfiguration.SessionOpenTimeout; break;
-                default: throw new NotImplementedException();
-            }
-
-
             CancellationTokenSource derTokenSource = null;
-            try
-            {
-                derTokenSource = CancellationTokenSource.CreateLinkedTokenSource(orginalCancellationToken);
-                {
-                    derTokenSource.CancelAfter(maxExecutionTime);
-                    try
-                    {
-                        return await fun(derTokenSource.Token);
-                    }
+            TimeSpan maxExecutionTime;
 
-                    catch (OperationCanceledException) when (!orginalCancellationToken.IsCancellationRequested && derTokenSource.IsCancellationRequested)
-                    {
-                        if (operationType == OperationType.SessionOpenAndRelated)
-                        {
-                            throw new Exception($"Can't connect to host {clientConfiguration.ApiUri}.  Operation timeout ({maxExecutionTime})");
-                        }
-                        else
-                        {
-                            throw new Exception($"Operation timeout ({maxExecutionTime}) when processing command to host {clientConfiguration.ApiUri}");
-                        }
-                    }
-                    catch(MorphApiUnauthorizedException morphApiUnauthorizedException)
-                    {
-                        var data = new ApiSessionUnauthenticatedEventData(this, apiSession);
-                        await AppWideApiSessionEventNotifier.Instance.InvokeOnApiSessionUnauthenticated(data).ConfigureAwait(false);
-                        throw;
-                    }
-                }
-            }
-            finally
+            void Clenup()
             {
                 if (derTokenSource != null)
                 {
@@ -303,6 +268,78 @@ namespace Morph.Server.Sdk.Client
                         derTokenSource.Dispose();
                     }
                 }
+                derTokenSource = null;
+            }
+
+
+            
+            switch (operationType)
+            {
+                case OperationType.FileTransfer:
+                    maxExecutionTime = clientConfiguration.FileTransferTimeout; break;
+                case OperationType.ShortOperation:
+                    maxExecutionTime = clientConfiguration.OperationTimeout; break;
+                case OperationType.SessionOpenAndRelated:
+                    maxExecutionTime = clientConfiguration.SessionOpenTimeout; break;
+                default: throw new NotImplementedException();
+            }
+
+
+            
+            try
+            {
+                derTokenSource = CancellationTokenSource.CreateLinkedTokenSource(orginalCancellationToken);                
+                derTokenSource.CancelAfter(maxExecutionTime);
+                try
+                {
+                    return await fun(apiSession, derTokenSource.Token);
+                }
+
+                catch (OperationCanceledException) when (!orginalCancellationToken.IsCancellationRequested && derTokenSource.IsCancellationRequested)
+                {
+                    if (operationType == OperationType.SessionOpenAndRelated)
+                    {
+                        throw new Exception($"Can't connect to host {clientConfiguration.ApiUri}.  Operation timeout ({maxExecutionTime})");
+                    }
+                    else
+                    {
+                        throw new Exception($"Operation timeout ({maxExecutionTime}) when processing command to host {clientConfiguration.ApiUri}");
+                    }
+                }
+                catch(Exception occuredException) when (this.SessionErrorHander!=null)
+                {
+                    
+                    var context = new SessionErrorContext(this,apiSession, operationType, occuredException);
+                    return await SessionErrorHander.HandleAsync(context, async (newApiSession) => {
+                        Clenup();
+                        derTokenSource = CancellationTokenSource.CreateLinkedTokenSource(orginalCancellationToken);
+                        derTokenSource.CancelAfter(maxExecutionTime);
+
+                        try
+                        {
+                            return await fun(newApiSession, derTokenSource.Token);
+                        }
+
+                        catch (OperationCanceledException) when (!orginalCancellationToken.IsCancellationRequested && derTokenSource.IsCancellationRequested)
+                        {
+                            if (operationType == OperationType.SessionOpenAndRelated)
+                            {
+                                throw new Exception($"Can't connect to host {clientConfiguration.ApiUri}.  Operation timeout ({maxExecutionTime})");
+                            }
+                            else
+                            {
+                                throw new Exception($"Operation timeout ({maxExecutionTime}) when processing command to host {clientConfiguration.ApiUri}");
+                            }
+                        }
+
+                    },  orginalCancellationToken);
+                    
+                }
+                
+            }
+            finally
+            {
+                Clenup();
             }
 
         }
@@ -455,13 +492,13 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(taskChangeModeRequest));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
                 var request = new SpaceTaskChangeModeRequestDto
                 {
                     TaskEnabled = taskChangeModeRequest.TaskEnabled
                 };
-                var apiResult = await _lowLevelApiClient.TaskChangeModeAsync(apiSession, spaceName, taskId, request, token);
+                var apiResult = await _lowLevelApiClient.TaskChangeModeAsync(session, spaceName, taskId, request, token);
                 return MapOrFail(apiResult, (dto) => SpaceTaskMapper.MapFull(dto));
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -482,9 +519,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.SpacesGetSpaceStatusAsync(apiSession,spaceName , token);
+                var apiResult = await _lowLevelApiClient.SpacesGetSpaceStatusAsync(session, spaceName , token);
                 return MapOrFail(apiResult, (dto) => SpaceStatusMapper.MapFromDto(dto));
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -510,9 +547,9 @@ namespace Morph.Server.Sdk.Client
 
         public async Task<SpacesEnumerationList> GetSpacesAccessibleListAsync(ApiSession apiSession, CancellationToken cancellationToken)
         {
-            return await WrappedWithSession(async (token) =>
+            return await WrappedWithSession(async (session,token) =>
             {
-                var apiResult = await _lowLevelApiClient.SpacesGetAccessibleListAsync(apiSession, token);
+                var apiResult = await _lowLevelApiClient.SpacesGetAccessibleListAsync(session, token);
                 return MapOrFail(apiResult, (dto) => SpacesEnumerationMapper.MapFromDto(dto));
 
             }, cancellationToken, OperationType.SessionOpenAndRelated, apiSession);
@@ -566,9 +603,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.WebFilesBrowseSpaceAsync(apiSession, spaceName, folderPath, token);
+                var apiResult = await _lowLevelApiClient.WebFilesBrowseSpaceAsync(session, spaceName, folderPath, token);
                 return MapOrFail(apiResult, (dto) => SpaceBrowsingMapper.MapFromDto(dto));
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -595,9 +632,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentException(nameof(serverFilePath));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.WebFileExistsAsync(apiSession, spaceName, serverFilePath, token);
+                var apiResult = await _lowLevelApiClient.WebFileExistsAsync(session, spaceName, serverFilePath, token);
                 return MapOrFail(apiResult, (dto) => dto);
             }, cancellationToken, OperationType.ShortOperation, apiSession);
         }
@@ -618,9 +655,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.WebFilesDeleteFileAsync(apiSession, spaceName, serverFilePath, token);
+                var apiResult = await _lowLevelApiClient.WebFilesDeleteFileAsync(session, spaceName, serverFilePath, token);
                 FailIfError(apiResult);
                 return Task.FromResult(0);
 
@@ -647,9 +684,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.WebFilesRenameFileAsync(apiSession, spaceName, parentFolderPath, oldFileName, newFileName, token);
+                var apiResult = await _lowLevelApiClient.WebFilesRenameFileAsync(session, spaceName, parentFolderPath, oldFileName, newFileName, token);
                 FailIfError(apiResult);
                 return Task.FromResult(0);
 
@@ -673,9 +710,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.WebFilesDeleteFolderAsync(apiSession, spaceName, serverFolderPath, failIfNotExists, token);
+                var apiResult = await _lowLevelApiClient.WebFilesDeleteFolderAsync(session, spaceName, serverFolderPath, failIfNotExists, token);
                 FailIfError(apiResult);
                 return Task.FromResult(0);
             }, cancellationToken, OperationType.ShortOperation,apiSession);
@@ -701,9 +738,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.WebFilesCreateFolderAsync(apiSession, spaceName, parentFolderPath, folderName, failIfExists, token);
+                var apiResult = await _lowLevelApiClient.WebFilesCreateFolderAsync(session, spaceName, parentFolderPath, folderName, failIfExists, token);
                 FailIfError(apiResult);
                 return Task.FromResult(0);
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -728,9 +765,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.WebFilesRenameFolderAsync(apiSession, spaceName, parentFolderPath, oldFolderName, newFolderName,
+                var apiResult = await _lowLevelApiClient.WebFilesRenameFolderAsync(session, spaceName, parentFolderPath, oldFolderName, newFolderName,
                     failIfExists, token);
                 FailIfError(apiResult);
                 return Task.FromResult(0);
@@ -756,14 +793,14 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentException("projectPath is empty", nameof(projectPath));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session,token) =>
             {
                 var request = new ValidateTasksRequestDto
                 {
                     SpaceName = spaceName,
                     ProjectPath = projectPath
                 };
-                var apiResult = await _lowLevelApiClient.ValidateTasksAsync(apiSession, request, token);
+                var apiResult = await _lowLevelApiClient.ValidateTasksAsync(session, request, token);
                 return MapOrFail(apiResult, (dto) => ValidateTasksResponseMapper.MapFromDto(dto));
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -778,9 +815,9 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return await WrappedWithSession(async (token) =>
+            return await WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.GetCurrentAuthenticatedUser(apiSession, token);
+                var apiResult = await _lowLevelApiClient.GetCurrentAuthenticatedUser(session, token);
                 return MapOrFail(apiResult, (dto) => AuthenticatedUserMaper.Map(dto));
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -924,9 +961,9 @@ namespace Morph.Server.Sdk.Client
 
         public Task<SpaceTasksList> GetTasksListAsync(ApiSession apiSession, string spaceName, CancellationToken cancellationToken)
         {
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.GetTasksListAsync(apiSession, spaceName, token);
+                var apiResult = await _lowLevelApiClient.GetTasksListAsync(session, spaceName, token);
                 return MapOrFail(apiResult, (dto) => TasksListDtoMapper.MapFromDto(dto));
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -935,9 +972,9 @@ namespace Morph.Server.Sdk.Client
 
         public Task<SpaceTask> GetTaskAsync(ApiSession apiSession, string spaceName, Guid taskId, CancellationToken cancellationToken)
         {
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
-                var apiResult = await _lowLevelApiClient.GetTaskAsync(apiSession, spaceName, taskId, token);
+                var apiResult = await _lowLevelApiClient.GetTaskAsync(session, spaceName, taskId, token);
                 return MapOrFail(apiResult, (dto) => SpaceTaskMapper.MapFull(dto));
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -948,12 +985,12 @@ namespace Morph.Server.Sdk.Client
             OverwriteBehavior overwriteBehavior,
             CancellationToken token)
         {
-            return WrappedWithSession(async t =>
+            return WrappedWithSession(async (session, t) =>
             {
                 var valueDto = SharedMemoryValueMapper.MapToDto(value);
 
                 var apiResult =
-                    await _lowLevelApiClient.SharedMemoryRemember(apiSession, spaceName, key, valueDto, overwriteBehavior, t);
+                    await _lowLevelApiClient.SharedMemoryRemember(session, spaceName, key, valueDto, overwriteBehavior, t);
                 return MapOrFail(apiResult, SharedMemoryValueMapper.MapFromDto);
             }, token, OperationType.ShortOperation,apiSession);
         }
@@ -961,9 +998,9 @@ namespace Morph.Server.Sdk.Client
         public async Task<SharedMemoryValue> SharedMemoryRecall(ApiSession apiSession, string spaceName, string key,
             CancellationToken token)
         {
-            return await WrappedWithSession(async t =>
+            return await WrappedWithSession(async (session,t) =>
             {
-                var apiResult = await _lowLevelApiClient.SharedMemoryRecall(apiSession, spaceName, key, t);
+                var apiResult = await _lowLevelApiClient.SharedMemoryRecall(session, spaceName, key, t);
                 return MapOrFail(apiResult, SharedMemoryValueMapper.MapFromDto);
             }, token, OperationType.ShortOperation, apiSession);
         }
@@ -971,18 +1008,18 @@ namespace Morph.Server.Sdk.Client
         public async Task<SharedMemoryListResponse> SharedMemoryList(ApiSession apiSession, string spaceName, string startsWith,
             int offset, int limit, CancellationToken token)
         {
-            return await WrappedWithSession(async t =>
+            return await WrappedWithSession(async (session,t) =>
             {
-                var apiResult = await _lowLevelApiClient.SharedMemoryList(apiSession,  spaceName, startsWith, offset, limit, t);
+                var apiResult = await _lowLevelApiClient.SharedMemoryList(session,  spaceName, startsWith, offset, limit, t);
                 return MapOrFail(apiResult, SharedMemoryValueMapper.MapFromDto);
             }, token, OperationType.ShortOperation, apiSession);
         }
 
         public async Task<int> SharedMemoryForget(ApiSession apiSession, string spaceName, string key, CancellationToken token)
         {
-            return await WrappedWithSession(async t =>
+            return await WrappedWithSession(async (session, t) =>
             {
-                var apiResult = await _lowLevelApiClient.SharedMemoryForget(apiSession, spaceName, key, t);
+                var apiResult = await _lowLevelApiClient.SharedMemoryForget(session, spaceName, key, t);
                 return MapOrFail(apiResult, dto => dto.DeletedCount);
             }, token, OperationType.ShortOperation, apiSession);
         }
@@ -995,10 +1032,10 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
                 Action<FileTransferProgressEventArgs> onReceiveProgress = TriggerOnDataDownloadProgress;
-                var apiResult = await _lowLevelApiClient.WebFilesDownloadFileAsync(apiSession,spaceName, remoteFilePath, onReceiveProgress, token);
+                var apiResult = await _lowLevelApiClient.WebFilesDownloadFileAsync(session, spaceName, remoteFilePath, onReceiveProgress, token);
                 return MapOrFail(apiResult, (data) => new ServerStreamingData(data.Stream, data.FileName, data.FileSize)
                 );
 
@@ -1013,7 +1050,7 @@ namespace Morph.Server.Sdk.Client
                     return;
                 if (_lowLevelApiClient != null)
                     _lowLevelApiClient.Dispose();
-
+                SessionErrorHander = null;
                 Array.ForEach(_ctsForDisposing.ToArray(), z => z.Dispose());
                 _disposed = true;
             }
@@ -1026,10 +1063,10 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(apiSession));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
                 Action<FileTransferProgressEventArgs> onReceiveProgress = TriggerOnDataDownloadProgress;
-                var apiResult = await _lowLevelApiClient.WebFilesDownloadFileAsync(apiSession, spaceName, remoteFilePath, onReceiveProgress, token);
+                var apiResult = await _lowLevelApiClient.WebFilesDownloadFileAsync(session, spaceName, remoteFilePath, onReceiveProgress, token);
                 return MapOrFail(apiResult, (data) => data.Stream);
 
             }, cancellationToken, OperationType.FileTransfer, apiSession);
@@ -1047,7 +1084,7 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(spaceUploadFileRequest));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
                 Action<FileTransferProgressEventArgs> onSendProgress = TriggerOnDataUploadProgress;
                 var sendStreamData = new SendFileStreamData(
@@ -1056,8 +1093,8 @@ namespace Morph.Server.Sdk.Client
                     spaceUploadFileRequest.FileSize);
                 var apiResult =
                     spaceUploadFileRequest.OverwriteExistingFile ?
-                    await _lowLevelApiClient.WebFilesPutFileStreamAsync(apiSession, spaceName, spaceUploadFileRequest.ServerFolder, sendStreamData, onSendProgress, token) :
-                    await _lowLevelApiClient.WebFilesPostFileStreamAsync(apiSession, spaceName, spaceUploadFileRequest.ServerFolder, sendStreamData, onSendProgress, token);
+                    await _lowLevelApiClient.WebFilesPutFileStreamAsync(session, spaceName, spaceUploadFileRequest.ServerFolder, sendStreamData, onSendProgress, token) :
+                    await _lowLevelApiClient.WebFilesPostFileStreamAsync(session, spaceName, spaceUploadFileRequest.ServerFolder, sendStreamData, onSendProgress, token);
                 FailIfError(apiResult);
                 return Task.FromResult(0);
 
@@ -1071,10 +1108,10 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentNullException(nameof(request));
             }
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
                 var requestDto = SpaceFilesQuickSearchRequestMapper.ToDto(request);
-                var apiResult = await _lowLevelApiClient.WebFilesQuickSearchSpaceAsync(apiSession, spaceName, requestDto, offset, limit,  token);
+                var apiResult = await _lowLevelApiClient.WebFilesQuickSearchSpaceAsync(session, spaceName, requestDto, offset, limit,  token);
                 return MapOrFail(apiResult, (dto) => SpaceFilesQuickSearchResponseMapper.MapFromDto(dto));
 
             }, cancellationToken, OperationType.ShortOperation, apiSession);
@@ -1106,7 +1143,7 @@ namespace Morph.Server.Sdk.Client
             if (pushStreamCallback == null)
                 throw new ArgumentNullException(nameof(pushStreamCallback));
 
-            return WrappedWithSession(async token =>
+            return WrappedWithSession(async (session,token) =>
             {
                 var request = new PushFileStreamData
                 {
@@ -1117,9 +1154,9 @@ namespace Morph.Server.Sdk.Client
                 
                 var result =
                     continuousStreamRequest.OverwriteExistingFile
-                        ? await _lowLevelApiClient.WebFilesPushPutFileStreamAsync(apiSession, spaceName,
+                        ? await _lowLevelApiClient.WebFilesPushPutFileStreamAsync(session, spaceName,
                             continuousStreamRequest.ServerFolder, request, token)
-                        : await _lowLevelApiClient.WebFilesPushPostFileStreamAsync(apiSession, spaceName,
+                        : await _lowLevelApiClient.WebFilesPushPostFileStreamAsync(session, spaceName,
                             continuousStreamRequest.ServerFolder, request, token);
 
                 FailIfError(result);

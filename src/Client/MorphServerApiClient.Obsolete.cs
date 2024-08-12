@@ -24,14 +24,14 @@ namespace Morph.Server.Sdk.Client
             if (continiousStreamRequest == null)
                 throw new ArgumentNullException(nameof(continiousStreamRequest));
 
-            return WrappedWithSession(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
                 var apiResult =
                     continiousStreamRequest.OverwriteExistingFile
-                        ? await _lowLevelApiClient.WebFilesOpenContiniousPutStreamAsync(apiSession,
+                        ? await _lowLevelApiClient.WebFilesOpenContiniousPutStreamAsync(session,
                             spaceName,
                             continiousStreamRequest.ServerFolder, continiousStreamRequest.FileName, token)
-                        : await _lowLevelApiClient.WebFilesOpenContiniousPostStreamAsync(apiSession,
+                        : await _lowLevelApiClient.WebFilesOpenContiniousPostStreamAsync(session,
                             spaceName,
                             continiousStreamRequest.ServerFolder, continiousStreamRequest.FileName, token);
 
