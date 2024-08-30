@@ -29,7 +29,7 @@ namespace Morph.Server.Sdk.Dto
 
         
         [DataMember(Name = "anonymousDueWrongSession")]
-        public string AnonymousDueWrongSession { get; set; }
+        public bool AnonymousDueWrongSession { get; set; }
 
 
 

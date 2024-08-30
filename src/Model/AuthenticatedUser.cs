@@ -8,7 +8,7 @@ namespace Morph.Server.Sdk.Model
 
     public sealed class AnonumousAuthenticatedUser : AuthenticatedUser
     {
-        public string AnonymousDueWrongSession { get; set; }
+        public bool AnonymousDueWrongSession { get; set; }
         
     }
 
