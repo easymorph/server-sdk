@@ -27,5 +27,8 @@ namespace Morph.Server.Sdk.Dto.SpaceFilesSearch
         /// </summary>
         [DataMember(Name = "files")]
         public FoundSpaceFileItemDto[] Files { get; set; }
+
+        [DataMember(Name = "isHidden")]
+        public bool IsHidden { get; set; }
     }
 }

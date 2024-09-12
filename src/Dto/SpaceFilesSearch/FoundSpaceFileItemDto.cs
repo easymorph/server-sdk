@@ -28,6 +28,7 @@ namespace Morph.Server.Sdk.Dto.SpaceFilesSearch
         [DataMember(Name = "lastModified")]
         public string LastModified { get; set; }
 
+
         /// <summary>
         /// Highlights. A plain array of tuples.
         /// The first item in the tuple is a zero-based string index to start highlighting.
@@ -36,5 +37,8 @@ namespace Morph.Server.Sdk.Dto.SpaceFilesSearch
         /// </summary>
         [DataMember(Name = "hl")]
         public int[] Highlights { get; set; }
+
+        [DataMember(Name = "isHidden")]
+        public bool IsHidden { get; set; }
     }
 }

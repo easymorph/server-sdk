@@ -51,6 +51,8 @@ namespace Morph.Server.Sdk.Model
         /// Timestamp in unix time, milliseconds
         /// </summary>
         public long? LastModifiedTimestamp { get; set; }
+
+        public bool IsHidden { get; set; }
     }
 
     
@@ -60,6 +62,7 @@ namespace Morph.Server.Sdk.Model
         public string Name { get; set; }
         
         public DateTime LastModified { get; set; }
+        public bool IsHidden { get; set; }
 
     }
 

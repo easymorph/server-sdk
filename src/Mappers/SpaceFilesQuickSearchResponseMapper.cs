@@ -29,7 +29,9 @@ namespace Morph.Server.Sdk.Mappers
                 Files = dto.Files.Select(MapFile).ToArray(),
                 Name = dto.Name,
                 LastModified = DateTime.Parse(dto.LastModified),
-                Path = dto.Path
+                Path = dto.Path,
+                IsHidden = dto.IsHidden
+               
             };
         }
 
@@ -41,7 +43,8 @@ namespace Morph.Server.Sdk.Mappers
                 FileSizeBytes = dto.FileSizeBytes,
                 Highlights = dto.Highlights,
                 LastModified = DateTime.Parse(dto.LastModified),
-                Name = dto.Name
+                Name = dto.Name,
+                IsHidden = dto.IsHidden
             };
         }
     }

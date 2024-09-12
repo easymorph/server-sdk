@@ -29,5 +29,9 @@ namespace Morph.Server.Sdk.Model
         /// Data may overlap.
         /// </summary>
         public int[] Highlights { get; set; }
+        /// <summary>
+        /// is file hidden
+        /// </summary>
+        public bool IsHidden { get; set; }
     }
 }
