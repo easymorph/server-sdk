@@ -16,5 +16,10 @@ namespace Morph.Server.Sdk.Dto
         public bool IsPublic { get; set; }
         [DataMember(Name = "userPermissions")]
         public List<string> UserPermissions { get; set; }
+
+        [DataMember (Name = "spaceDescription")]
+        public string SpaceDescription { get; set; }
+
+
     }
 }
