@@ -23,6 +23,7 @@ namespace Morph.Server.Sdk.Mappers
                 TaskName = dto.Name,
                 Note = dto.Note,
                 ProjectPath = dto.ProjectFile,
+                Group = dto.Group ?? string.Empty,
                 Schedules = dto.Schedules?
                     .Select(sdto => new TaskSchedule { ScheduleType = sdto.ScheduleType, ScheduleDescription = sdto.ScheduleAsText })
                     .ToArray() ?? new[] { NoSchedule }
@@ -38,6 +39,10 @@ namespace Morph.Server.Sdk.Mappers
                 TaskName = fullDto.Name,
                 Note = fullDto.Note,
                 ProjectPath = fullDto.ProjectFile,
+                Group = fullDto.Group ?? string.Empty,
+                Schedules = fullDto.Schedules?
+                    .Select(sdto => new TaskSchedule { ScheduleType = sdto.ScheduleType, ScheduleDescription = sdto.ScheduleAsText })
+                    .ToArray() ?? new[] { NoSchedule }
             };
             if(fullDto.Parameters  != null)
             {

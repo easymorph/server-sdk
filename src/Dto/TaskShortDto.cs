@@ -27,7 +27,9 @@ namespace Morph.Server.Sdk.Dto
         public string Name { get; set; } = string.Empty;
         
         [DataMember(Name="nextRunText")]
-        public string NextRunText { get; set; } = "";
-     
+        public string NextRunText { get; set; } = string.Empty;
+        [DataMember(Name = "group")]
+        public string Group { get; set; } = string.Empty;
+
     }
 }
