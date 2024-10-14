@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace Morph.Server.Sdk.Dto
@@ -19,7 +20,12 @@ namespace Morph.Server.Sdk.Dto
         
         [DataMember(Name = "name")]
         public string Name { get; set; } = string.Empty;
-        
-        
+        [DataMember(Name = "group")]
+        public string Group { get; set; } = string.Empty;
+
+        [DataMember(Name = "schedules")]
+        public ScheduleBaseDto[] Schedules { get; set; } = Array.Empty<ScheduleBaseDto>();
+
+
     }
 }

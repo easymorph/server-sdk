@@ -2,7 +2,7 @@
 
 namespace Morph.Server.Sdk.Model
 {
-    public enum TaskParameterType
+    public enum ParameterType
     {
         [Description("Text or number")]
         Text,

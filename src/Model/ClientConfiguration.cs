@@ -19,7 +19,7 @@ namespace Morph.Server.Sdk.Model
 
         public bool AutoDisposeClientOnSessionClose { get; set; } = MorphServerApiClientGlobalConfig.AutoDisposeClientOnSessionClose;
 
-        public IApiSessionRefresher SessionRefresher { get; set; } = AppWideSessionRefresher.Instance;
+        public ILegacyApiSessionRefresher LegacySessionRefresher { get; set; } = AppWideLegacyApiSessionRefresher.Instance;
 
         public Uri ApiUri { get; set; }
         public HttpSecurityState HttpSecurityState { get; set; } = HttpSecurityState.NotEvaluated;

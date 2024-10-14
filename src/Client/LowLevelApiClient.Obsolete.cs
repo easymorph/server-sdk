@@ -14,26 +14,39 @@ namespace Morph.Server.Sdk.Client
     {
         
         [Obsolete("Obsolete due to flaw in response checking. Use WebFilesPushPostFileStreamAsync instead.")]
-        public Task<ApiResult<ServerPushStreaming>> WebFilesOpenContiniousPostStreamAsync(ApiSession apiSession, string serverFolder, string fileName, CancellationToken cancellationToken)
+        public Task<ApiResult<ServerPushStreaming>> WebFilesOpenContiniousPostStreamAsync(ApiSession apiSession, 
+            string spaceName, string serverFolder, string fileName, CancellationToken cancellationToken)
         {
             if (apiSession == null)
             {
                 throw new ArgumentNullException(nameof(apiSession));
             }
-            var spaceName = apiSession.SpaceName;
+
+            if (string.IsNullOrWhiteSpace(spaceName))
+            {
+                throw new ArgumentException($"'{nameof(spaceName)}' cannot be null or whitespace.", nameof(spaceName));
+            }
+
             var url = UrlHelper.JoinUrl("space", spaceName, "files", serverFolder);
 
             return apiClient.PushContiniousStreamingDataAsync<NoContentResult>(HttpMethod.Post, url, new ContiniousStreamingRequest(fileName), null, apiSession.ToHeadersCollection(), cancellationToken);
         }
 
         [Obsolete("Obsolete due to flaw in response checking. Use WebFilesPushPutFileStreamAsync instead.")]
-        public Task<ApiResult<ServerPushStreaming>> WebFilesOpenContiniousPutStreamAsync(ApiSession apiSession, string serverFolder, string fileName, CancellationToken cancellationToken)
+        public Task<ApiResult<ServerPushStreaming>> WebFilesOpenContiniousPutStreamAsync(ApiSession apiSession,
+            string spaceName,
+            string serverFolder, string fileName, CancellationToken cancellationToken)
         {
             if (apiSession == null)
             {
                 throw new ArgumentNullException(nameof(apiSession));
             }
-            var spaceName = apiSession.SpaceName;
+
+            if (string.IsNullOrWhiteSpace(spaceName))
+            {
+                throw new ArgumentException($"'{nameof(spaceName)}' cannot be null or whitespace.", nameof(spaceName));
+            }
+
             var url = UrlHelper.JoinUrl("space", spaceName, "files", serverFolder);
 
             return apiClient.PushContiniousStreamingDataAsync<NoContentResult>(HttpMethod.Put, url, new ContiniousStreamingRequest(fileName), null, apiSession.ToHeadersCollection(), cancellationToken);

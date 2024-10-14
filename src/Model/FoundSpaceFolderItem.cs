@@ -22,5 +22,7 @@ namespace Morph.Server.Sdk.Model
         /// Found files
         /// </summary>        
         public FoundSpaceFileItem[] Files { get; set; }
+
+        public bool IsHidden { get; set; }
     }
 }

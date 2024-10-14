@@ -2,6 +2,7 @@
 using Morph.Server.Sdk.Dto.Errors;
 using Morph.Server.Sdk.Model;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Morph.Server.Sdk.Mappers
@@ -18,14 +19,52 @@ namespace Morph.Server.Sdk.Mappers
 
        
         public static SpaceEnumerationItem MapItemFromDto(SpaceEnumerationItemDto dto)
-        {
+        {   
             return new SpaceEnumerationItem
             {
                 IsPublic = dto.IsPublic,
-                SpaceName = dto.SpaceName,
-                SpaceAccessRestriction = ParseSpaceAccessRestriction(dto.SpaceAccessRestriction)
+                SpaceName = dto.SpaceName,                
+                SpaceAuthenticationProviderTypes = FillProviders(
+                    ParseSpaceAccessRestriction(dto.SpaceAccessRestriction), dto.AuthenticationProviders).ToArray()
             };
         }
+
+
+        private static IEnumerable<IdPType> FillProviders(SpaceAccessRestriction spaceAccessRestriction,
+                                                            string[] authenticationProviders)
+        {
+
+            // authentication providers can be null for servers before `feature\users` (5.8.0)
+            if (authenticationProviders == null)
+            {
+                switch (spaceAccessRestriction)
+                {
+                    case SpaceAccessRestriction.None:
+                        yield return IdPType.Anonymous;
+                        break;
+                    case SpaceAccessRestriction.BasicPassword:
+                        yield return IdPType.SpacePwd;
+                        break;
+                    case SpaceAccessRestriction.WindowsAuthentication:
+                        yield return IdPType.AdSeamlessIdP;
+                        break;
+                    default:
+                        break;
+
+                }
+            }
+            else 
+            {
+                foreach (var provider in authenticationProviders)
+                {
+                    if (IdPTypeMapper.TryParse(provider, out IdPType idPType))
+                    {
+                        yield return idPType;
+                    }
+                }
+            }
+        }
+
         internal static SpaceAccessRestriction ParseSpaceAccessRestriction(string value)
         {
             SpaceAccessRestriction parsed;

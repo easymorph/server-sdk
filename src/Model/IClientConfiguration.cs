@@ -18,7 +18,7 @@ namespace Morph.Server.Sdk.Model
 
         bool AutoDisposeClientOnSessionClose { get; }
 
-        IApiSessionRefresher SessionRefresher { get; }
+        ILegacyApiSessionRefresher LegacySessionRefresher { get; }
 
         Uri ApiUri { get; }
         HttpSecurityState HttpSecurityState { get; }

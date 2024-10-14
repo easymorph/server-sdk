@@ -35,7 +35,9 @@ namespace Morph.Server.Sdk.Mappers
                 FileSizeBytes = dto.FileSizeBytes,
                 LastModified = DateTime.Parse(dto.LastModified),
                 LastModifiedTimestamp = dto.LastModifiedTimestamp,
-                Name = dto.Name
+                Name = dto.Name,
+                IsHidden = dto.IsHidden
+                
             };
         }
         private static SpaceFolderInfo Map(SpaceFolderItemDto dto)
@@ -43,7 +45,8 @@ namespace Morph.Server.Sdk.Mappers
             return new SpaceFolderInfo
             {
                 LastModified =  DateTime.Parse(dto.LastModified),
-                Name = dto.Name
+                Name = dto.Name,
+                IsHidden = dto.IsHidden
             };
         }
         private static SpaceNavigation Map(SpaceNavigationItemDto dto)

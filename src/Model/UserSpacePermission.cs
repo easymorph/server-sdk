@@ -14,5 +14,9 @@
         FileUpload,
         FileDownload,
         FileDeletion,
+
+        WebPagesView,
+        CatalogAccess,
+        CustomApiServer
     }
 }

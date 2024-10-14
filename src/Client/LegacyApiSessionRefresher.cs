@@ -15,7 +15,7 @@ namespace Morph.Server.Sdk.Client
     /// <summary>
     /// Service that provides seamless API token refresh
     /// </summary>
-    public class ApiSessionRefresher : IApiSessionRefresher
+    public class LegacyApiSessionRefresher : ILegacyApiSessionRefresher
     {
         /// <summary>
         /// DTO for '/user/me' endpoint. That endpoint returns more info, but here we only interested in one field to check whether
@@ -42,8 +42,8 @@ namespace Morph.Server.Sdk.Client
         private readonly ConcurrentDictionary<string, Container<Authenticator>> _authenticators =
             new ConcurrentDictionary<string, Container<Authenticator>>();
 
-        private readonly ConcurrentDictionary<ApiSession, DateTime> _sessions =
-            new ConcurrentDictionary<ApiSession, DateTime>();
+        private readonly ConcurrentDictionary<LegacyApiSession, DateTime> _sessions =
+            new ConcurrentDictionary<LegacyApiSession, DateTime>();
 
         private readonly ConcurrentDictionary<string, Container<Task<ApiSession>>> _refreshTasks =
             new ConcurrentDictionary<string, Container<Task<ApiSession>>>();
@@ -55,6 +55,12 @@ namespace Morph.Server.Sdk.Client
             var expiredSessionToken = headers.GetValueOrDefault(ApiSession.AuthHeaderName);
 
             if (string.IsNullOrEmpty(expiredSessionToken))
+                return false;
+
+            // this code should perform refresh sequence only for the legacy sessions.
+            LegacyApiSession sessionObject = _sessions.FirstOrDefault(x => x.Key.AuthToken == expiredSessionToken).Key;
+            // if no linked sessions found - skip refresh
+            if (sessionObject == null) 
                 return false;
 
             var authenticator = _authenticators.TryRemove(expiredSessionToken, out var value) ? value : null;
@@ -190,9 +196,9 @@ namespace Morph.Server.Sdk.Client
                 .Select(x => x.Value.Value.Result).FirstOrDefault() ?? source;
         }
 
-        public void AssociateAuthenticator(ApiSession session, Authenticator authenticator)
+        public void AssociateAuthenticator(LegacyApiSession session, Authenticator authenticator)
         {
-            if (null == session?.AuthToken)
+            if (session is null)
                 return;
 
             _authenticators.TryAdd(session.AuthToken, new Container<Authenticator>(authenticator));
@@ -203,7 +209,8 @@ namespace Morph.Server.Sdk.Client
 
         private void PruneCache()
         {
-            var removeBefore = DateTime.UtcNow - TimeSpan.FromHours(5);
+            // max legacy session TTL is 48 hours
+            var removeBefore = DateTime.UtcNow - TimeSpan.FromHours(48);
 
             // Remove everything that was last touched 5 hours ago.
 

@@ -23,6 +23,35 @@ namespace Morph.Server.Sdk.Dto
         
         }
     }
+
+
+    [DataContract]
+    internal class MorphParameterValueListItemDto
+    {
+        [DataMember(Name = "v")]
+        public string Value { get; set; }
+        [DataMember(Name = "l")]
+        public string Label { get; set; }
+
+        public MorphParameterValueListItemDto()
+        {
+            Value = string.Empty;
+            Label = string.Empty;
+
+        }
+    }
+
+    [DataContract]
+    internal class TaskParameterDetailsDto
+    {
+        [DataMember(Name = "availableValues")]
+        public MorphParameterValueListItemDto[] AvailableValues { get; set; }
+
+        [DataMember(Name = "sepatatorString")]
+        public string SepatatorString { get; set; }
+
+    }
+
     [DataContract]
     internal class TaskParameterResponseDto
     {
@@ -35,12 +64,17 @@ namespace Morph.Server.Sdk.Dto
         [DataMember(Name = "note")]
         public string Note { get; set; }
 
+        [DataMember(Name="details")]
+        public TaskParameterDetailsDto Details { get; set; }
+
         public TaskParameterResponseDto()
         {
             Name = string.Empty;
             Value = string.Empty;
             ParameterType = string.Empty;
             Note = string.Empty;
+            
+
         }
     }
 }

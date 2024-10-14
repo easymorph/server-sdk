@@ -16,8 +16,8 @@ namespace Morph.Server.Sdk.Mappers
             {
                 IsPublic = dto.IsPublic,
                 SpaceName = dto.SpaceName,
-                UserPermissions = dto.UserPermissions?.Select(MapPermission)?.Where(x => x.HasValue)?.Select(x => x.Value)?.ToList().AsReadOnly()
-
+                UserPermissions = dto.UserPermissions?.Select(MapPermission)?.Where(x => x.HasValue)?.Select(x => x.Value)?.ToList().AsReadOnly(),
+                SpaceDescription = dto.SpaceDescription                
             };
         }
 

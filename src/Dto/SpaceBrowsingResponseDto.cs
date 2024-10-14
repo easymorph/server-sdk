@@ -42,6 +42,9 @@ namespace Morph.Server.Sdk.Dto
         public string LastModified { get; set; }
         [DataMember(Name = "lastModifiedTimestamp")]
         public long? LastModifiedTimestamp { get; set; }
+        [DataMember(Name = "isHidden")]
+        public bool IsHidden { get; set; }
+
     }
 
     [DataContract]
@@ -51,6 +54,8 @@ namespace Morph.Server.Sdk.Dto
         public string Name { get; set; }
         [DataMember(Name = "lastModified")]
         public string LastModified { get; set; }
+        [DataMember(Name = "isHidden")]
+        public bool IsHidden { get; set; }
 
     }
 

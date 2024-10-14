@@ -11,10 +11,15 @@ namespace Morph.Server.Sdk.Dto
     {
         [DataMember(Name = "spaceName")]
         public string SpaceName { get; set; }
+
         [DataMember(Name = "isPublic")]
         public bool IsPublic { get; set; }
+
         [DataMember(Name = "spaceAccessRestriction")]
-        public string SpaceAccessRestriction { get; set; } 
+        public string SpaceAccessRestriction { get; set; }
+
+        [DataMember(Name = "authenticationProviders")]         
+        public string[] AuthenticationProviders { get; set; }
 
     }
 }

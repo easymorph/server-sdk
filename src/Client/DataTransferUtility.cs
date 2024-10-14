@@ -14,11 +14,18 @@ namespace Morph.Server.Sdk.Client
         private int BufferSize { get; set; }  = 81920;
         private readonly IMorphServerApiClient _morphServerApiClient;
         private readonly ApiSession _apiSession;
+        private readonly string _spaceName;
 
-        public DataTransferUtility(IMorphServerApiClient morphServerApiClient, ApiSession apiSession)
+        public DataTransferUtility(IMorphServerApiClient morphServerApiClient, ApiSession apiSession, string spaceName)
         {
+            if (string.IsNullOrWhiteSpace(spaceName))
+            {
+                throw new ArgumentException($"'{nameof(spaceName)}' cannot be null or whitespace.", nameof(spaceName));
+            }
+
             this._morphServerApiClient = morphServerApiClient ?? throw new ArgumentNullException(nameof(morphServerApiClient));
             this._apiSession = apiSession ?? throw new ArgumentNullException(nameof(apiSession));
+            this._spaceName = spaceName;
         }
 
         public async Task SpaceUploadFileAsync(string localFilePath, string serverFolder, CancellationToken cancellationToken, bool overwriteExistingFile = false)
@@ -39,7 +46,7 @@ namespace Morph.Server.Sdk.Client
                     OverwriteExistingFile = overwriteExistingFile,
                     ServerFolder = serverFolder
                 };
-                await _morphServerApiClient.SpaceUploadDataStreamAsync(_apiSession, request, cancellationToken);
+                await _morphServerApiClient.SpaceUploadDataStreamAsync(_apiSession, _spaceName, request, cancellationToken);
                 return;
             }
         }
@@ -73,7 +80,7 @@ namespace Morph.Server.Sdk.Client
             {
                 using (Stream tempFileStream = File.Open(tempFile, FileMode.Create))
                 {
-                    using (var serverStreamingData = await _morphServerApiClient.SpaceOpenStreamingDataAsync(_apiSession, remoteFilePath, cancellationToken))
+                    using (var serverStreamingData = await _morphServerApiClient.SpaceOpenStreamingDataAsync(_apiSession, _spaceName, remoteFilePath, cancellationToken))
                     {
                         await serverStreamingData.Stream.CopyToAsync(tempFileStream, BufferSize, cancellationToken);
                     }
@@ -116,7 +123,7 @@ namespace Morph.Server.Sdk.Client
                 using (Stream tempFileStream = File.Open(tempFile, FileMode.Create))
                 {
 
-                    using (var serverStreamingData = await _morphServerApiClient.SpaceOpenStreamingDataAsync(_apiSession, remoteFilePath, cancellationToken))
+                    using (var serverStreamingData = await _morphServerApiClient.SpaceOpenStreamingDataAsync(_apiSession, _spaceName, remoteFilePath, cancellationToken))
                     {
                         destFileName = Path.Combine(targetLocalFolder, serverStreamingData.FileName);
 
@@ -166,7 +173,7 @@ namespace Morph.Server.Sdk.Client
                     OverwriteExistingFile = overwriteExistingFile,
                     ServerFolder = serverFolder
                 };
-                await _morphServerApiClient.SpaceUploadDataStreamAsync(_apiSession, request, cancellationToken);
+                await _morphServerApiClient.SpaceUploadDataStreamAsync(_apiSession, _spaceName, request, cancellationToken);
                 return;
             }
         }

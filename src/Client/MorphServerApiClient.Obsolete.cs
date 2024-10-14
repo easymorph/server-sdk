@@ -15,6 +15,7 @@ namespace Morph.Server.Sdk.Client
         [Obsolete(
             "Obsolete due to flaw in response checking. Use SpaceUploadPushDataStreamAsync instead. Will be removed in next major version.")]
         public Task<ContiniousStreamingConnection> SpaceUploadContiniousStreamingAsync(ApiSession apiSession,
+            string spaceName,
             SpaceUploadContiniousStreamRequest continiousStreamRequest, CancellationToken cancellationToken)
         {
             if (apiSession == null)
@@ -23,18 +24,20 @@ namespace Morph.Server.Sdk.Client
             if (continiousStreamRequest == null)
                 throw new ArgumentNullException(nameof(continiousStreamRequest));
 
-            return Wrapped(async (token) =>
+            return WrappedWithSession(async (session, token) =>
             {
                 var apiResult =
                     continiousStreamRequest.OverwriteExistingFile
-                        ? await _lowLevelApiClient.WebFilesOpenContiniousPutStreamAsync(apiSession,
+                        ? await _lowLevelApiClient.WebFilesOpenContiniousPutStreamAsync(session,
+                            spaceName,
                             continiousStreamRequest.ServerFolder, continiousStreamRequest.FileName, token)
-                        : await _lowLevelApiClient.WebFilesOpenContiniousPostStreamAsync(apiSession,
+                        : await _lowLevelApiClient.WebFilesOpenContiniousPostStreamAsync(session,
+                            spaceName,
                             continiousStreamRequest.ServerFolder, continiousStreamRequest.FileName, token);
 
                 var connection = MapOrFail(apiResult, c => c);
                 return new ContiniousStreamingConnection(connection);
-            }, cancellationToken, OperationType.FileTransfer);
+            }, cancellationToken, OperationType.FileTransfer,apiSession);
         }
     }
 }
