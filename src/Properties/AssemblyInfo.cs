@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("EasyMorph Inc.")]
 [assembly: AssemblyProduct("Morph.Server.Sdk")]
-[assembly: AssemblyCopyright("Copyright © EasyMorph Inc. 2017-2024")]
+[assembly: AssemblyCopyright("Copyright © EasyMorph Inc. 2017-2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -21,5 +21,5 @@ using System.Runtime.InteropServices;
 [assembly: Guid("72ecc66f-62fe-463f-afad-e1ff5cc19cd9")]
 
 
-[assembly: AssemblyVersion("5.9.0.0")]
-[assembly: AssemblyFileVersion("5.9.0.0")]
+[assembly: AssemblyVersion("5.9.1.0")]
+[assembly: AssemblyFileVersion("5.9.1.0")]
