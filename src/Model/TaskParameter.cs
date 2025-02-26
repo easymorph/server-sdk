@@ -44,6 +44,14 @@ namespace Morph.Server.Sdk.Model
             this.Value = value ?? string.Empty;
         }
     }
+    
+    public sealed class FileUploadsParameter : ParameterBase
+    {
+        public FileUploadsParameter(string name, string value) : base(ParameterType.UploadsParameter, name)
+        {
+            this.Value = value ?? string.Empty;
+        }
+    }
 
     public sealed class FilePathParameter : ParameterBase
     {

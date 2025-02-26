@@ -12,6 +12,10 @@ namespace Morph.Server.Sdk.Dto
     {
         [DataMember(Name = "taskId")]
         public Guid TaskId { get; set; }
+        
+        [DataMember(Name = "uploadContextId")]
+        public string UploadContextId { get; set; }
+        
         [DataMember(Name = "taskParameters")]
         public IList<TaskParameterRequestDto> TaskParameters { get; set; } = new List<TaskParameterRequestDto>();
     }

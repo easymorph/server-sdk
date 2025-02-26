@@ -170,9 +170,10 @@ namespace Morph.Server.Sdk.Client
 
             return WrappedWithSession(async (session,token) =>
             {
-                var requestDto = new TaskStartRequestDto()
+                var requestDto = new TaskStartRequestDto
                 {
                     TaskId = startTaskRequest.TaskId,
+                    UploadContextId = startTaskRequest.UploadContextId,
                     TaskParameters = startTaskRequest.TaskParameters?.Select(TaskParameterMapper.ToDto)?.ToList()
                 };
 

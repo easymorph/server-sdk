@@ -19,7 +19,9 @@ namespace Morph.Server.Sdk.Model
         [Description("Fixed list")]
         FixedList,
         [Description("Multiple choice")]
-        MultipleChoice
+        MultipleChoice,
+        [Description("File Uploads")]
+        UploadsParameter
 
     }
 

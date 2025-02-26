@@ -44,7 +44,8 @@ namespace Morph.Server.Sdk.Mappers
                 case ParameterType.MultipleChoice:
                     return new MultipleChoiceParameter(dto.Name, dto.Value, dto.Details?.SepatatorString, MapAvailableValues(dto.Details?.AvailableValues)) { Note = dto.Note };
 
-
+                case ParameterType.UploadsParameter:
+                    return new FileUploadsParameter(dto.Name, dto.Value) { Note = dto.Note };
                 default:
                     return new TextParameter(dto.Name, dto.Value) { Note = dto.Note };
             }
