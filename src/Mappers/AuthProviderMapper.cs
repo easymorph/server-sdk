@@ -40,6 +40,9 @@ namespace Morph.Server.Sdk.Mappers
                 case "openid":
                     idPType = IdPType.OpenId;
                     return true;
+                case "entraidp":
+                    idPType = IdPType.EntraIdP;
+                    return true;
                 default:
                     idPType = IdPType.Unknown;
                     return false;
@@ -81,6 +84,8 @@ namespace Morph.Server.Sdk.Mappers
                         return new RescueLoginIdP(dispayName, idPId);
                     case IdPType.OpenId:
                         return new OpenIdP(dispayName, idPId, canKeepLongSession);
+                    case IdPType.EntraIdP:
+                        return new EntraIdP(dispayName, idPId, canKeepLongSession);
                     default:
                         return new UnknownIdP(dispayName, idPId, idPType);
 

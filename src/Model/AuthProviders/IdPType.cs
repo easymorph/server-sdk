@@ -30,8 +30,13 @@
         /// </summary>
         RescueLogin,
 
-        OpenId
-       
+        OpenId,
+
+        /// <summary>
+        /// Entra (Azure AD) 
+        /// </summary>
+        EntraIdP
+
     }
 
 }
