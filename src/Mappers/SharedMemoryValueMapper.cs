@@ -27,6 +27,13 @@ namespace Morph.Server.Sdk.Mappers
             }
         }
 
+        public static SharedMemoryValue MapFromDto(SharedMemoryNumberValueDto dto)
+        {
+            return dto.Value != null
+                ? SharedMemoryValue.NewNumber(dto.Value.Value)
+                : SharedMemoryValue.NewNothing();
+        }
+
         public static SharedMemoryValueDto MapToDto(SharedMemoryValue value)
         {
             switch (value)
@@ -100,6 +107,20 @@ namespace Morph.Server.Sdk.Mappers
                     return SetSharedMemoryValueDto.BehaviorCodes.IgnoreIfExists;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(overwriteBehavior), overwriteBehavior, null);
+            }
+        }
+
+        public static string MapMissingKeyBehavior(MissingKeyBehavior missingKeyBehavior)
+        {
+            switch (missingKeyBehavior)
+            {
+                case MissingKeyBehavior.Throw:
+                    return IncrementSharedMemoryValueDto.BehaviorCodes.Throw;
+                case MissingKeyBehavior.UseDefault:
+                    return IncrementSharedMemoryValueDto.BehaviorCodes.UseDefault;
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(missingKeyBehavior), missingKeyBehavior, null);
             }
         }
     }

@@ -996,6 +996,21 @@ namespace Morph.Server.Sdk.Client
             }, token, OperationType.ShortOperation,apiSession);
         }
 
+        public async Task<SharedMemoryValue> SharedMemoryIncrement(
+            ApiSession apiSession,
+            string spaceName,
+            string key,
+            decimal value,
+            MissingKeyBehavior missingKeyBehavior, CancellationToken token)
+        {
+            return await WrappedWithSession(async (session,t) =>
+            {
+                var apiResult = await _lowLevelApiClient.SharedMemoryIncrement(
+                    session, spaceName, key, value, missingKeyBehavior, t);
+                return MapOrFail(apiResult, SharedMemoryValueMapper.MapFromDto);
+            }, token, OperationType.ShortOperation, apiSession);
+        }
+
         public async Task<SharedMemoryValue> SharedMemoryRecall(ApiSession apiSession, string spaceName, string key,
             CancellationToken token)
         {

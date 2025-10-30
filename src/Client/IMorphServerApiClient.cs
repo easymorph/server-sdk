@@ -157,6 +157,23 @@ namespace Morph.Server.Sdk.Client
             OverwriteBehavior overwriteBehavior, CancellationToken token);
 
         /// <summary>
+        ///     Increments a shared memory item
+        /// </summary>
+        /// <param name="apiSession"></param>
+        /// <param name="spaceName"></param>
+        /// <param name="key">Key</param>
+        /// <param name="value">Value to increment by</param>
+        /// <param name="missingKeyBehavior">What to do if the key does not exist</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>Resulting value after the increment</returns>
+        Task<SharedMemoryValue> SharedMemoryIncrement(
+            ApiSession apiSession,
+            string spaceName,
+            string key,
+            decimal value,
+            MissingKeyBehavior missingKeyBehavior, CancellationToken token);
+
+        /// <summary>
         ///     Get value of a shared memory item
         /// </summary>
         /// <param name="apiSession"></param>
