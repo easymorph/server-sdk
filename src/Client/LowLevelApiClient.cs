@@ -15,6 +15,7 @@ using Morph.Server.Sdk.Events;
 using System.Net.Http;
 using Morph.Server.Sdk.Dto.SpaceFilesSearch;
 using System.Collections.Specialized;
+using System.Globalization;
 using Morph.Server.Sdk.Dto.SharedMemory;
 using Morph.Server.Sdk.Model.SharedMemory;
 using Morph.Server.Sdk.Dto.Auth;
@@ -616,6 +617,33 @@ namespace Morph.Server.Sdk.Client
                 setSharedMemoryValueDto, urlParameters: null, apiSession.ToHeadersCollection(), cancellationToken);
         }
 
+        public async Task<ApiResult<SharedMemoryNumberValueDto>> SharedMemoryIncrement(
+            ApiSession apiSession,
+            string spaceName,
+            string key,
+            decimal value,
+            MissingKeyBehavior missingKeyBehavior, CancellationToken cancellationToken)
+        {
+            if (apiSession == null) throw new ArgumentNullException(nameof(apiSession));
+            if (string.IsNullOrWhiteSpace(spaceName))
+            {
+                throw new ArgumentException($"'{nameof(spaceName)}' cannot be null or whitespace.", nameof(spaceName));
+            }
+
+            var url = UrlHelper.JoinUrl("space", spaceName, "sharedmemory", "number/increment");
+
+            var incrementSharedMemoryValueDto = new IncrementSharedMemoryValueDto
+            {
+                Key = key,
+                Value = value,
+                MissingKeyBehavior = SharedMemoryValueMapper.MapMissingKeyBehavior(missingKeyBehavior)
+            };
+
+            var res = await apiClient.PutAsync<IncrementSharedMemoryValueDto, SharedMemoryNumberValueDto>(
+                url, incrementSharedMemoryValueDto, urlParameters: null, apiSession.ToHeadersCollection(), cancellationToken);
+            return res;
+        }
+
         public async Task<ApiResult<SharedMemoryValueDto>> SharedMemoryRecall(ApiSession apiSession,
             string spaceName,
             string key,
@@ -627,7 +655,7 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentException($"'{nameof(spaceName)}' cannot be null or whitespace.", nameof(spaceName));
             }
 
-            
+
             var url = UrlHelper.JoinUrl("space", spaceName, "sharedmemory", "item");
             
             var urlParameters = new NameValueCollection
@@ -673,7 +701,6 @@ namespace Morph.Server.Sdk.Client
                 throw new ArgumentException($"'{nameof(spaceName)}' cannot be null or whitespace.", nameof(spaceName));
             }
 
-            
             var url = UrlHelper.JoinUrl("space", spaceName, "sharedmemory", "item");
             
             var urlParameters = new NameValueCollection

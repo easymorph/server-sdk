@@ -104,6 +104,12 @@ namespace Morph.Server.Sdk.Client
 
         Task<ApiResult<SharedMemoryValueDto>> SharedMemoryRemember(ApiSession apiSession, string spaceName, string key,
             SharedMemoryValueDto value, OverwriteBehavior overwriteBehavior, CancellationToken cancellationToken);
+        Task<ApiResult<SharedMemoryNumberValueDto>> SharedMemoryIncrement(
+            ApiSession apiSession,
+            string spaceName,
+            string key,
+            decimal value,
+            MissingKeyBehavior missingKeyBehavior, CancellationToken cancellationToken);
         Task<ApiResult<SharedMemoryValueDto>> SharedMemoryRecall(ApiSession apiSession, string spaceName, string key, CancellationToken cancellationToken);
         Task<ApiResult<SharedMemoryListResponseDto>> SharedMemoryList(ApiSession apiSession, string spaceName, string startsWith, int offset, int limit, CancellationToken cancellationToken);
         Task<ApiResult<DeleteSharedMemoryResponseDto>> SharedMemoryForget(ApiSession apiSession, string spaceName, string key,
